@@ -1,13 +1,222 @@
+#root {
+  min-height: 100vh;
+}
 
-@theme {
-  --animate-logo-spin: logo-spin infinite 20s linear;
+.course-page {
+  --ink: #172f2a;
+  --muted: #63716c;
+  --line: #d7e0dc;
+  --accent: #c55635;
 
-  @keyframes logo-spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
+  width: min(100% - 48px, 1060px);
+  margin-inline: auto;
+  padding: 72px 0 88px;
+}
+
+.page-header {
+  padding-bottom: 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+.term-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.term-label span {
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  color: var(--accent);
+}
+
+.page-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.page-heading h1 {
+  margin: 0;
+  color: var(--ink);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  font-size: clamp(2.75rem, 7vw, 5.25rem);
+  font-weight: 500;
+  line-height: 0.98;
+}
+
+.course-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.course-count span {
+  margin-right: 8px;
+  color: var(--accent);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  font-size: 1.5rem;
+}
+
+.page-description {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.subject-list {
+  display: grid;
+  gap: 44px;
+  padding-top: 38px;
+}
+
+.subject-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.subject-heading h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.subject-heading span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.course-card {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  padding: 24px 26px 22px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+  animation: card-enter 420ms both;
+}
+
+.course-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+  content: '';
+}
+
+.course-card-heading {
+  min-height: 78px;
+}
+
+.course-number {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.course-card h3 {
+  margin: 0;
+  color: var(--ink);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.course-details {
+  display: grid;
+  gap: 15px;
+  margin: 20px 0 0;
+  padding-top: 17px;
+  border-top: 1px solid #e9eeeb;
+}
+
+.course-details div {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.course-details dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.course-details dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .course-page {
+    width: min(100% - 36px, 480px);
+    padding-top: 44px;
+    padding-bottom: 56px;
+  }
+
+  .page-header {
+    padding-bottom: 32px;
+  }
+
+  .course-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .course-card {
+    padding: 21px 20px 19px;
+  }
+
+  .course-card-heading {
+    min-height: auto;
+  }
+
+  .course-details {
+    margin-top: 17px;
   }
 }
