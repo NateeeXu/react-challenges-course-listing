@@ -62,7 +62,7 @@ const App = () => {
                 <h2 id={`subject-${index}`}>{subject}</h2>
                 <span>{subjectCourses.length}</span>
               </div>
-              <div className="course-grid">
+              <div className="grid grid-cols-1 items-stretch gap-3.5 sm:grid-cols-2">
                 {subjectCourses.map((course) => (
                   <CourseCard key={course.courseid} course={course} />
                 ))}
