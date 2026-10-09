@@ -1,9 +1,8 @@
 export interface Course {
-  courseid: string;
-  name: string;
-  subject: string;
-  time: string;
-  location: string;
+  term: string;
+  number: string;
+  meets: string;
+  title: string;
 }
 
 interface CourseCardProps {
@@ -18,23 +17,17 @@ export const CourseCard = ({ course }: CourseCardProps) => (
     />
     <div className="min-h-0 sm:min-h-[78px]">
       <p className="mb-2 text-xs font-bold tracking-wider text-[var(--accent)]">
-        {course.courseid}
+        CS {course.number}
       </p>
       <h3 className="font-serif text-[1.45rem] leading-[1.2] font-medium text-[var(--ink)]">
-        {course.name}
+        {course.title}
       </h3>
     </div>
     <dl className="mt-auto grid gap-4 border-t border-[#e9eeeb] pt-4">
       <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3">
         <dt className="text-xs text-[var(--muted)]">Meeting time</dt>
         <dd className="m-0 text-sm leading-[1.4] font-semibold text-[var(--ink)]">
-          {course.time}
-        </dd>
-      </div>
-      <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3">
-        <dt className="text-xs text-[var(--muted)]">Location</dt>
-        <dd className="m-0 text-sm leading-[1.4] font-semibold text-[var(--ink)]">
-          {course.location}
+          {course.meets || 'TBA'}
         </dd>
       </div>
     </dl>

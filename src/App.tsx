@@ -1,70 +1,74 @@
 import './App.css';
 import { CourseCard, type Course } from './components/CourseCard';
+import { useJsonQuery } from './utilities/fetch';
 
-const courses: Course[] = [
-  {
-    courseid: 'CS 392',
-    name: 'Rapid Prototyping',
-    subject: 'Computer Science',
-    time: 'Mon, Wed, Fri · 2:00–3:20 PM',
-    location: 'Tech',
-  },
-  {
-    courseid: 'CS 349',
-    name: 'Machine Learning',
-    subject: 'Computer Science',
-    time: 'Tues, Thurs · 9:30–10:50 AM',
-    location: 'Tech',
-  },
-  {
-    courseid: 'EE 475',
-    name: 'Machine Learning',
-    subject: 'Electrical Engineering',
-    time: 'Monday · 5:00–7:50 PM',
-    location: 'Tech',
-  },
-];
+interface Schedule {
+  title: string;
+  courses: Record<string, Course>;
+}
 
-const subjects = ['Computer Science', 'Electrical Engineering'];
+const scheduleUrl =
+  'https://courses.cs.northwestern.edu/394/guides/data/cs-courses.php';
+
+const terms = ['Fall', 'Winter', 'Spring'];
 
 const App = () => {
+  const [schedule, isLoading, error] = useJsonQuery<Schedule>(scheduleUrl);
+
+  if (error) {
+    return (
+      <main className="course-page">
+        <p className="status-message">Error loading courses: {error.message}</p>
+      </main>
+    );
+  }
+
+  if (isLoading || !schedule) {
+    return (
+      <main className="course-page">
+        <p className="status-message">Loading courses…</p>
+      </main>
+    );
+  }
+
+  const courses = Object.entries(schedule.courses);
   const courseCount = courses.length;
 
   return (
     <main className="course-page">
       <header className="page-header">
-        <p className="term-label">Course guide <span>Fall 2026</span></p>
+        <p className="term-label">Course guide <span>CS</span></p>
         <div className="page-heading">
-          <h1>Courses</h1>
+          <h1>{schedule.title}</h1>
           <p className="course-count">
             <span>{courseCount}</span>
             {courseCount === 1 ? ' course' : ' courses'}
           </p>
         </div>
         <p className="page-description">
-          Your semester, organized by department.
+          Course schedule fetched live, organized by term.
         </p>
       </header>
 
       <div className="subject-list">
-        {subjects.map((subject, index) => {
-          const subjectCourses = courses.filter(
-            (course) => course.subject === subject,
+        {terms.map((term, index) => {
+          const termCourses = courses.filter(
+            ([, course]) => course.term === term,
           );
 
           return (
             <section
               className="subject-section"
-              key={subject}
-              aria-labelledby={`subject-${index}`}
+              key={term}
+              aria-labelledby={`term-${index}`}
             >
               <div className="subject-heading">
-                <h2 id={`subject-${index}`}>{subject}</h2>
-                <span>{subjectCourses.length}</span>
+                <h2 id={`term-${index}`}>{term}</h2>
+                <span>{termCourses.length}</span>
               </div>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-stretch gap-3.5">
-                {subjectCourses.map((course) => (
-                  <CourseCard key={course.courseid} course={course} />
+                {termCourses.map(([id, course]) => (
+                  <CourseCard key={id} course={course} />
                 ))}
               </div>
             </section>
