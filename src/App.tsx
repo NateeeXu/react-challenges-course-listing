@@ -1,5 +1,6 @@
 import './App.css';
-import { CourseCard, type Course } from './components/CourseCard';
+import type { Course } from './components/CourseCard';
+import { TermPage } from './components/TermPage';
 import { useJsonQuery } from './utilities/fetch';
 
 interface Schedule {
@@ -9,8 +10,6 @@ interface Schedule {
 
 const scheduleUrl =
   'https://courses.cs.northwestern.edu/394/guides/data/cs-courses.php';
-
-const terms = ['Fall', 'Winter', 'Spring'];
 
 const App = () => {
   const [schedule, isLoading, error] = useJsonQuery<Schedule>(scheduleUrl);
@@ -31,8 +30,7 @@ const App = () => {
     );
   }
 
-  const courses = Object.entries(schedule.courses);
-  const courseCount = courses.length;
+  const courseCount = Object.keys(schedule.courses).length;
 
   return (
     <main className="course-page">
@@ -42,7 +40,7 @@ const App = () => {
           <h1>{schedule.title}</h1>
           <p className="course-count">
             <span>{courseCount}</span>
-            {courseCount === 1 ? ' course' : ' courses'}
+            {courseCount === 1 ? ' total course' : ' total courses'}
           </p>
         </div>
         <p className="page-description">
@@ -50,31 +48,7 @@ const App = () => {
         </p>
       </header>
 
-      <div className="subject-list">
-        {terms.map((term, index) => {
-          const termCourses = courses.filter(
-            ([, course]) => course.term === term,
-          );
-
-          return (
-            <section
-              className="subject-section"
-              key={term}
-              aria-labelledby={`term-${index}`}
-            >
-              <div className="subject-heading">
-                <h2 id={`term-${index}`}>{term}</h2>
-                <span>{termCourses.length}</span>
-              </div>
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-stretch gap-3.5">
-                {termCourses.map(([id, course]) => (
-                  <CourseCard key={id} course={course} />
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
+      <TermPage courses={schedule.courses} />
     </main>
   );
 };
