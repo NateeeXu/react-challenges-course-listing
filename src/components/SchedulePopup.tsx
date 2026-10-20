@@ -18,10 +18,16 @@ export function SchedulePopup({ courses, onClose }: SchedulePopupProps) {
     document.body.style.overflow = 'hidden';
 
     return () => {
-      dialog.close();
+      if (dialog.open) dialog.close();
       document.body.style.overflow = previousOverflow;
     };
   }, []);
+
+  const closePopup = () => {
+    // Close while the dialog is still mounted so the browser restores focus.
+    dialogRef.current?.close();
+    onClose();
+  };
 
   return (
     <dialog
@@ -30,10 +36,10 @@ export function SchedulePopup({ courses, onClose }: SchedulePopupProps) {
       className="fixed inset-0 m-auto max-h-[85dvh] w-[92vw] max-w-2xl overflow-y-auto rounded-xl border border-[var(--line)] bg-[#f4f7f5] p-0 text-[var(--ink)] shadow-xl backdrop:bg-[#172f2a]/50 backdrop:backdrop-blur-sm"
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        closePopup();
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) closePopup();
       }}
     >
       <div className="p-5 sm:p-8">
@@ -48,7 +54,7 @@ export function SchedulePopup({ courses, onClose }: SchedulePopupProps) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closePopup}
             className="cursor-pointer rounded-full border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
           >
             Close
