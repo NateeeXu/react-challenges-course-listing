@@ -8,23 +8,27 @@ export interface Course {
 interface CourseCardProps {
   course: Course;
   selected: boolean;
+  conflict: boolean;
   onToggle: () => void;
 }
 
-export const CourseCard = ({ course, selected, onToggle }: CourseCardProps) => (
+export const CourseCard = ({ course, selected, conflict, onToggle }: CourseCardProps) => (
   <article
     className={`relative flex h-full min-w-0 flex-col overflow-hidden rounded-md border px-5 pt-5 pb-5 transition-colors sm:px-6 sm:pt-6 sm:pb-5 ${
       selected
         ? 'border-[var(--accent)] bg-[#fff8f4]'
-        : 'border-[var(--line)] bg-white'
+        : conflict
+          ? 'border-[var(--line)] bg-[#edf0ee] opacity-60'
+          : 'border-[var(--line)] bg-white'
     }`}
   >
     <button
       type="button"
-      aria-label={`Select CS ${course.number}: ${course.title}`}
+      aria-label={`Select CS ${course.number}: ${course.title}${conflict ? ' (time conflict)' : ''}`}
       aria-pressed={selected}
+      disabled={conflict && !selected}
       onClick={onToggle}
-      className="absolute inset-0 z-10 cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+      className="absolute inset-0 z-10 cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed"
     />
     <span
       aria-hidden="true"
@@ -38,6 +42,11 @@ export const CourseCard = ({ course, selected, onToggle }: CourseCardProps) => (
         {selected && (
           <span className="text-xs font-bold text-[var(--accent)]" aria-hidden="true">
             ✓ Selected
+          </span>
+        )}
+        {conflict && !selected && (
+          <span className="text-xs font-bold text-[#9b3326]" aria-hidden="true">
+            × Time conflict
           </span>
         )}
       </div>

@@ -3,10 +3,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TermPage } from './TermPage';
 
 const courses = {
-  F101: { term: 'Fall', number: '101', title: 'Fall course', meets: 'MWF 9:00' },
-  F102: { term: 'Fall', number: '102', title: 'Another fall course', meets: 'MWF 11:00' },
-  W201: { term: 'Winter', number: '201', title: 'Winter course', meets: 'MWF 10:00' },
-  S301: { term: 'Spring', number: '301', title: 'Spring course', meets: 'MWF 11:00' },
+  F101: { term: 'Fall', number: '101', title: 'Fall course', meets: 'MWF 9:00-9:50' },
+  F102: { term: 'Fall', number: '102', title: 'Another fall course', meets: 'MWF 11:00-11:50' },
+  W201: { term: 'Winter', number: '201', title: 'Winter course', meets: 'MWF 10:00-10:50' },
+  S301: { term: 'Spring', number: '301', title: 'Spring course', meets: 'MWF 11:00-11:50' },
 };
 
 // jsdom does not implement the browser's native dialog methods.
@@ -99,7 +99,7 @@ describe('TermPage', () => {
     const popup = screen.getByRole('dialog');
     expect(within(popup).getByText('Fall · CS 101')).toBeTruthy();
     expect(within(popup).getByText('Winter · CS 201')).toBeTruthy();
-    expect(within(popup).getByText('Meeting time: MWF 9:00')).toBeTruthy();
+    expect(within(popup).getByText('Meeting time: MWF 9:00-9:50')).toBeTruthy();
     expect(within(popup).getByText('Winter course')).toBeTruthy();
     expect(within(popup).queryByText('Another fall course')).toBeNull();
 
@@ -110,5 +110,32 @@ describe('TermPage', () => {
     fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByText('2 selected')).toBeTruthy();
+  });
+
+  it('blocks overlapping courses and unlocks them after the selected course is removed', () => {
+    render(<TermPage courses={{
+      ...courses,
+      F103: { term: 'Fall', number: '103', title: 'Overlapping course', meets: 'W 9:30-10:20' },
+      F104: { term: 'Fall', number: '104', title: 'Different days', meets: 'TuTh 9:00-9:50' },
+      F105: { term: 'Fall', number: '105', title: 'No meeting time', meets: '' },
+    }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 101:/ }));
+    const blocked = screen.getByRole('button', { name: /Select CS 103:/ }) as HTMLButtonElement;
+    expect(blocked.disabled).toBe(true);
+    expect(screen.getByText('× Time conflict')).toBeTruthy();
+    expect((screen.getByRole('button', { name: /Select CS 101:/ }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(blocked);
+    expect(screen.getByText('1 selected')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 104:/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 105:/ }));
+    expect(screen.getByText('3 selected')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 101:/ }));
+    expect(blocked.disabled).toBe(false);
+    fireEvent.click(blocked);
+    expect(screen.getByText('3 selected')).toBeTruthy();
+    expect(blocked.getAttribute('aria-pressed')).toBe('true');
   });
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CourseCard, type Course } from './CourseCard';
 import { TermSelector, type Term } from './TermSelector';
 import { SchedulePopup } from './SchedulePopup';
+import { coursesConflict } from '../utilities/time-conflicts';
 
 interface TermPageProps {
   courses: Record<string, Course>;
@@ -19,11 +20,13 @@ export function TermPage({ courses }: TermPageProps) {
   );
 
   const toggleCourse = (id: string) => {
-    setSelectedCourseIds((current) =>
-      current.includes(id)
-        ? current.filter((courseId) => courseId !== id)
-        : [...current, id],
-    );
+    setSelectedCourseIds((current) => {
+      if (current.includes(id)) return current.filter((courseId) => courseId !== id);
+      if (current.some((selectedId) => coursesConflict(courses[id], courses[selectedId]))) {
+        return current;
+      }
+      return [...current, id];
+    });
   };
 
   return (
@@ -50,14 +53,21 @@ export function TermPage({ courses }: TermPageProps) {
           <span>{visibleCourses.length}</span>
         </div>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-stretch gap-3.5">
-          {visibleCourses.map(([id, course]) => (
-            <CourseCard
-              key={id}
-              course={course}
-              selected={selectedCourseIds.includes(id)}
-              onToggle={() => toggleCourse(id)}
-            />
-          ))}
+          {visibleCourses.map(([id, course]) => {
+            const selected = selectedCourseIds.includes(id);
+            const conflict = !selected && selectedCourses.some(
+              ([, selectedCourse]) => coursesConflict(course, selectedCourse),
+            );
+            return (
+              <CourseCard
+                key={id}
+                course={course}
+                selected={selected}
+                conflict={conflict}
+                onToggle={() => toggleCourse(id)}
+              />
+            );
+          })}
         </div>
       </section>
       {isPlanOpen && (
