@@ -1,6 +1,12 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render as renderComponent, screen, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TermPage } from './TermPage';
+
+function render(component: ReactElement, path = '/') {
+  return renderComponent(<MemoryRouter initialEntries={[path]}>{component}</MemoryRouter>);
+}
 
 const courses = {
   F101: { term: 'Fall', number: '101', title: 'Fall course', meets: 'MWF 9:00-9:50' },
@@ -137,5 +143,78 @@ describe('TermPage', () => {
     fireEvent.click(blocked);
     expect(screen.getByText('3 selected')).toBeTruthy();
     expect(blocked.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('opens a prefilled edit form without selecting the course', async () => {
+    render(<TermPage courses={courses} />);
+    expect(screen.getAllByRole('link', { name: /^Edit CS/ })).toHaveLength(2);
+    fireEvent.click(screen.getByRole('link', { name: /Edit CS 101:/ }));
+
+    const title = await screen.findByRole('textbox', { name: 'Course title' }) as HTMLInputElement;
+    expect(title.value).toBe('Fall course');
+    expect((screen.getByRole('textbox', { name: 'Meeting times' }) as HTMLInputElement).value).toBe('MWF 9:00-9:50');
+    expect(screen.queryByRole('button', { name: /Submit|Save/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Edit course' })).toBe(document.activeElement);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByText('0 selected')).toBeTruthy();
+  });
+
+  it('discards local edits and keeps the selected term and courses after Cancel', async () => {
+    render(<TermPage courses={courses} />);
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 101:/ }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Winter' }));
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 201:/ }));
+    fireEvent.click(screen.getByRole('link', { name: /Edit CS 201:/ }));
+
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Course title' }), { target: { value: 'Draft title' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Meeting times' }), { target: { value: 'TuTh 12:00-13:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(await screen.findByText('2 selected')).toBeTruthy();
+    expect((screen.getByRole('radio', { name: 'Winter' }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText('Winter course')).toBeTruthy();
+    expect(screen.queryByText('Draft title')).toBeNull();
+    expect(screen.getByRole('button', { name: /Select CS 201:/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(courses.W201.title).toBe('Winter course');
+    fireEvent.click(screen.getByRole('link', { name: /Edit CS 201:/ }));
+    expect((await screen.findByRole('textbox', { name: 'Course title' }) as HTMLInputElement).value).toBe('Winter course');
+    expect((screen.getByRole('textbox', { name: 'Meeting times' }) as HTMLInputElement).value).toBe('MWF 10:00-10:50');
+  });
+
+  it('prevents form submission without changing the original schedule', () => {
+    render(<TermPage courses={courses} />, '/courses/F101/edit');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Course title' }), { target: { value: 'Unsaved draft' } });
+    const event = new Event('submit', { bubbles: true, cancelable: true });
+    fireEvent(screen.getByRole('form', { name: 'Edit course' }), event);
+    expect(event.defaultPrevented).toBe(true);
+    expect((screen.getByRole('textbox', { name: 'Course title' }) as HTMLInputElement).value).toBe('Unsaved draft');
+    expect(courses.F101.title).toBe('Fall course');
+    expect(screen.getByRole('button', { name: 'Cancel' }).getAttribute('type')).toBe('button');
+  });
+
+  it('keeps Edit available on a course blocked by a time conflict', async () => {
+    render(<TermPage courses={{ ...courses,
+      F103: { term: 'Fall', number: '103', title: 'Overlapping course', meets: 'W 9:30-10:20' },
+    }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 101:/ }));
+    expect((screen.getByRole('button', { name: /Select CS 103:/ }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('link', { name: /Edit CS 103:/ }));
+    expect((await screen.findByRole('textbox', { name: 'Course title' }) as HTMLInputElement).value).toBe('Overlapping course');
+  });
+
+  it('loads a course directly by its URL, including courses with no meeting time', () => {
+    render(<TermPage courses={{ ...courses,
+      S302: { term: 'Spring', number: '302', title: 'Independent study', meets: '' },
+    }} />, '/courses/S302/edit');
+    expect((screen.getByRole('textbox', { name: 'Course title' }) as HTMLInputElement).value).toBe('Independent study');
+    expect((screen.getByRole('textbox', { name: 'Meeting times' }) as HTMLInputElement).value).toBe('');
+  });
+
+  it.each(['missing', 'toString'])('handles an unknown course ID: %s', async (id) => {
+    render(<TermPage courses={courses} />, `/courses/${id}/edit`);
+    expect(screen.getByRole('heading', { name: 'Course not found' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('link', { name: 'Return to courses' }));
+    expect(await screen.findByRole('radio', { name: 'Fall' })).toBeTruthy();
   });
 });

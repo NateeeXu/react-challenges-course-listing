@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link, Route, Routes } from 'react-router';
+import { CourseEditPage } from './CourseEditPage';
 import { CourseCard, type Course } from './CourseCard';
 import { TermSelector, type Term } from './TermSelector';
 import { SchedulePopup } from './SchedulePopup';
@@ -29,7 +31,8 @@ export function TermPage({ courses }: TermPageProps) {
     });
   };
 
-  return (
+  // Keep list state above the route switch so Cancel does not clear the plan.
+  const courseList = (
     <div className="subject-list">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <TermSelector selectedTerm={selectedTerm} onSelect={setSelectedTerm} />
@@ -61,6 +64,7 @@ export function TermPage({ courses }: TermPageProps) {
             return (
               <CourseCard
                 key={id}
+                courseId={id}
                 course={course}
                 selected={selected}
                 conflict={conflict}
@@ -74,5 +78,18 @@ export function TermPage({ courses }: TermPageProps) {
         <SchedulePopup courses={selectedCourses} onClose={() => setIsPlanOpen(false)} />
       )}
     </div>
+  );
+
+  return (
+    <Routes>
+      <Route path="/" element={courseList} />
+      <Route path="/courses/:courseId/edit" element={<CourseEditPage courses={courses} />} />
+      <Route path="*" element={
+        <section className="subject-list">
+          <h2>Page not found</h2>
+          <Link to="/" className="text-[var(--accent)] underline">Return to courses</Link>
+        </section>
+      } />
+    </Routes>
   );
 }
