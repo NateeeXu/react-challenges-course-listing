@@ -1,11 +1,6 @@
 import { Link } from 'react-router';
-
-export interface Course {
-  term: string;
-  number: string;
-  meets: string;
-  title: string;
-}
+import type { Course } from '../types/course';
+export type { Course } from '../types/course';
 
 interface CourseCardProps {
   courseId: string;

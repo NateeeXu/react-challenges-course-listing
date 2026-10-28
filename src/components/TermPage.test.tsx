@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TermPage } from './TermPage';
+import type { Course } from '../types/course';
 
 function render(component: ReactElement, path = '/') {
   return renderComponent(<MemoryRouter initialEntries={[path]}>{component}</MemoryRouter>);
@@ -13,7 +14,7 @@ const courses = {
   F102: { term: 'Fall', number: '102', title: 'Another fall course', meets: 'MWF 11:00-11:50' },
   W201: { term: 'Winter', number: '201', title: 'Winter course', meets: 'MWF 10:00-10:50' },
   S301: { term: 'Spring', number: '301', title: 'Spring course', meets: 'MWF 11:00-11:50' },
-};
+} satisfies Record<string, Course>;
 
 // jsdom does not implement the browser's native dialog methods.
 const dialogMethods = ['showModal', 'close'] as const;
