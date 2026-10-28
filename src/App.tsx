@@ -1,18 +1,9 @@
 import './App.css';
-import type { Course } from './components/CourseCard';
 import { TermPage } from './components/TermPage';
-import { useJsonQuery } from './utilities/fetch';
-
-interface Schedule {
-  title: string;
-  courses: Record<string, Course>;
-}
-
-const scheduleUrl =
-  'https://courses.cs.northwestern.edu/394/guides/data/cs-courses.php';
+import { useSchedule } from './hooks/useSchedule';
 
 const App = () => {
-  const [schedule, isLoading, error] = useJsonQuery<Schedule>(scheduleUrl);
+  const { schedule, isLoading, error } = useSchedule();
 
   if (error) {
     return (
