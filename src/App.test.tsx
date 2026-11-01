@@ -3,6 +3,15 @@ import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { Schedule } from './types/schedule';
+import { AuthProvider } from './components/AuthProvider';
+
+vi.mock('./services/auth', () => ({
+  subscribeToAuth: (onUser: (user: { uid: string; displayName: string; email: null }) => void) => {
+    onUser({ uid: 'test-user', displayName: 'Student', email: null });
+    return () => {};
+  },
+  signInWithGoogle: vi.fn(), signOutUser: vi.fn(), authErrorMessage: () => 'Authentication failed.',
+}));
 
 const service = vi.hoisted(() => ({
   unsubscribe: vi.fn(),
@@ -18,7 +27,7 @@ const schedule: Schedule = {
     W110: { term: 'Winter', number: '110', title: 'Programming', meets: '' },
   },
 };
-const renderApp = () => render(<MemoryRouter><App /></MemoryRouter>);
+const renderApp = () => render(<MemoryRouter><AuthProvider><App /></AuthProvider></MemoryRouter>);
 
 beforeEach(() => {
   vi.clearAllMocks();

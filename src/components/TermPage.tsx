@@ -5,12 +5,14 @@ import { CourseCard, type Course } from './CourseCard';
 import { TermSelector, type Term } from './TermSelector';
 import { SchedulePopup } from './SchedulePopup';
 import { coursesConflict } from '../utilities/time-conflicts';
+import { useAuth } from '../hooks/useAuth';
 
 interface TermPageProps {
   courses: Record<string, Course>;
 }
 
 export function TermPage({ courses }: TermPageProps) {
+  const { user, isLoading } = useAuth();
   const [selectedTerm, setSelectedTerm] = useState<Term>('Fall');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [isPlanOpen, setIsPlanOpen] = useState(false);
@@ -66,6 +68,7 @@ export function TermPage({ courses }: TermPageProps) {
                 key={id}
                 courseId={id}
                 course={course}
+                canEdit={Boolean(user) && !isLoading}
                 selected={selected}
                 conflict={conflict}
                 onToggle={() => toggleCourse(id)}

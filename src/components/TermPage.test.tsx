@@ -6,6 +6,7 @@ import { TermPage } from './TermPage';
 import type { Course } from '../types/course';
 
 vi.mock('../services/schedule', () => ({ saveCourse: vi.fn() }));
+vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'test-user' }, isLoading: false, error: null }) }));
 
 function render(component: ReactElement, path = '/') {
   return renderComponent(<MemoryRouter initialEntries={[path]}>{component}</MemoryRouter>);

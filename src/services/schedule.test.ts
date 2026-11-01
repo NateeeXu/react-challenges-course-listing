@@ -9,6 +9,7 @@ interface SnapshotStub {
 
 const firebase = vi.hoisted(() => ({
   database: {},
+  authentication: { currentUser: { uid: 'test-user' } as { uid: string } | null },
   reference: {},
   doc: vi.fn(),
   unsubscribe: vi.fn(),
@@ -22,7 +23,7 @@ const firebase = vi.hoisted(() => ({
   update: vi.fn(),
 }));
 
-vi.mock('./firebase', () => ({ database: firebase.database }));
+vi.mock('./firebase', () => ({ database: firebase.database, authentication: firebase.authentication }));
 vi.mock('firebase/firestore', () => ({
   doc: firebase.doc, onSnapshot: firebase.onSnapshot, runTransaction: firebase.runTransaction,
   FieldPath: class { constructor(...segments: string[]) { Object.assign(this, { segments }); } },
@@ -35,6 +36,7 @@ const data = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  firebase.authentication.currentUser = { uid: 'test-user' };
   firebase.doc.mockReturnValue(firebase.reference);
   firebase.onSnapshot.mockReturnValue(firebase.unsubscribe);
   firebase.get.mockResolvedValue({ exists: () => true, data: () => data });
@@ -44,6 +46,12 @@ beforeEach(() => {
 describe('saveCourse', () => {
   const original = data.courses.F101;
   const changed = { ...original, title: 'New title' };
+
+  it('rejects signed-out callers before starting any database operation', async () => {
+    firebase.authentication.currentUser = null;
+    await expect(saveCourse('F101', original, changed)).rejects.toThrow('Sign in to edit courses.');
+    expect(firebase.runTransaction).not.toHaveBeenCalled();
+  });
 
   it('validates before writing and skips unchanged normalized values', async () => {
     await expect(saveCourse('F101', original, { ...changed, title: 'X' })).rejects.toThrow();

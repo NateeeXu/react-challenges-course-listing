@@ -2,14 +2,25 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { courseResolver, courseSchema, coursesEqual, courseTerms, type Course, type CourseDraft } from '../types/course';
 import { saveCourse } from '../services/schedule';
+import { useAuth } from '../hooks/useAuth';
 
 interface CourseEditPageProps {
   courses: Record<string, Course>;
 }
 
 export function CourseEditPage({ courses }: CourseEditPageProps) {
+  const { user, isLoading } = useAuth();
   const { courseId } = useParams();
   const course = courseId && Object.hasOwn(courses, courseId) ? courses[courseId] : undefined;
+
+  if (isLoading) return <p role="status" className="status-message">Checking sign-in…</p>;
+  if (!user) return (
+    <section className="subject-list">
+      <h2>Sign in to edit courses</h2>
+      <p className="m-0 text-[var(--muted)]">Use the Google sign-in button above, or return to browsing courses.</p>
+      <Link to="/" className="text-[var(--accent)] underline">Return to courses</Link>
+    </section>
+  );
 
   if (!course || !courseId) {
     return (
@@ -22,7 +33,7 @@ export function CourseEditPage({ courses }: CourseEditPageProps) {
   }
 
   // A different course gets a fresh draft, even when navigating between edit URLs.
-  return <CourseForm key={courseId} courseId={courseId} course={course} />;
+  return <CourseForm key={`${user.uid}:${courseId}`} courseId={courseId} course={course} />;
 }
 
 function CourseForm({ courseId, course }: { courseId: string; course: Course }) {

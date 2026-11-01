@@ -1,6 +1,7 @@
 import './App.css';
 import { TermPage } from './components/TermPage';
 import { useSchedule } from './hooks/useSchedule';
+import { AuthBanner } from './components/AuthBanner';
 
 const App = () => {
   const { schedule, isLoading, error } = useSchedule();
@@ -8,6 +9,7 @@ const App = () => {
   if (error) {
     return (
       <main className="course-page">
+        <AuthBanner />
         <p className="status-message">Error loading courses: {error.message}</p>
       </main>
     );
@@ -16,6 +18,7 @@ const App = () => {
   if (isLoading || !schedule) {
     return (
       <main className="course-page">
+        <AuthBanner />
         <p className="status-message">Loading courses…</p>
       </main>
     );
@@ -25,6 +28,7 @@ const App = () => {
 
   return (
     <main className="course-page">
+      <AuthBanner />
       <header className="page-header">
         <p className="term-label">Course guide <span>CS</span></p>
         <div className="page-heading">

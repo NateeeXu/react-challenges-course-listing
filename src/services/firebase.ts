@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // Public web-app configuration, not an administrative credential.
 // Access to the course data is controlled by firestore.rules.
@@ -13,3 +14,4 @@ const firebaseConfig = {
 
 const app = getApps().some((app) => app.name === '[DEFAULT]') ? getApp() : initializeApp(firebaseConfig);
 export const database = getFirestore(app);
+export const authentication = getAuth(app);

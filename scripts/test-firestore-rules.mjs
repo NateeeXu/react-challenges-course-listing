@@ -12,7 +12,9 @@ const before = { title: 'Example', courseOrder: ['F101', 'W101'], courses: {
 const changed = { ...before, courses: { ...before.courses, F101: { ...course, title: 'New title' } }, lastEditedCourseId: 'F101' };
 const cases = [];
 const add = (label, expectation, data, method = 'update', target = path) => {
-  cases.push({ label, test: { expectation, request: { method, path: target, resource: { data } }, resource: { data: before } } });
+  cases.push({ label, test: { expectation, request: { method, path: target, resource: { data },
+    auth: { uid: 'signed-in-student', token: { firebase: { sign_in_provider: 'google.com' } } },
+  }, resource: { data: before } } });
 };
 const edit = (patch) => ({ ...changed, courses: { ...changed.courses, F101: { ...changed.courses.F101, ...patch } } });
 
@@ -49,6 +51,14 @@ add('delete schedule', 'DENY', before, 'delete');
 add('list schedules', 'DENY', before, 'list', '/databases/(default)/documents/schedules');
 add('read unrelated document', 'DENY', before, 'get', '/databases/(default)/documents/private/test');
 add('write unrelated schedule', 'DENY', changed, 'update', '/databases/(default)/documents/schedules/other');
+for (const [label, expectation, method, data] of [
+  ['signed-out schedule read', 'ALLOW', 'get', before],
+  ['signed-out valid update', 'DENY', 'update', changed],
+  ['signed-out invalid update', 'DENY', 'update', edit({ title: 'X' })],
+]) {
+  add(label, expectation, data, method);
+  delete cases.at(-1).test.request.auth;
+}
 
 const main = async () => {
   const binary = process.env.PATH.split(delimiter).map((directory) => join(directory, 'firebase')).find(existsSync);

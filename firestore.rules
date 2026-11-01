@@ -26,11 +26,10 @@ service cloud.firestore {
           && validTimes(course.meets)));
     }
 
-    // Coursework demo: visitors may edit ONE existing course per request.
-    // Authentication/administrator restrictions are a separate challenge.
+    // Anyone may read; only authenticated users may edit one valid existing course.
     match /schedules/CS-2018-2019 {
       allow get: if true;
-      allow update: if validUpdate();
+      allow update: if request.auth != null && validUpdate();
       allow list, create, delete: if false;
 
       function validUpdate() {

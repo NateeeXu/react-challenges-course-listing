@@ -1,9 +1,10 @@
 import { doc, FieldPath, onSnapshot, runTransaction } from 'firebase/firestore';
-import { database } from './firebase';
+import { authentication, database } from './firebase';
 import { parseSchedule, scheduleDocumentId, type Schedule } from '../types/schedule';
 import { courseSchema, coursesEqual, type Course } from '../types/course';
 
 export const saveCourse = async (courseId: string, original: Course, draft: Course): Promise<void> => {
+  if (!authentication.currentUser) throw new Error('Sign in to edit courses.');
   const values = courseSchema.parse(draft);
   if (coursesEqual(original, values)) return;
 

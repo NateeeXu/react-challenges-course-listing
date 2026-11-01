@@ -6,6 +6,7 @@ import type { Course } from '../types/course';
 import { saveCourse } from '../services/schedule';
 
 vi.mock('../services/schedule', () => ({ saveCourse: vi.fn() }));
+vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'test-user' }, isLoading: false, error: null }) }));
 beforeEach(() => { vi.mocked(saveCourse).mockReset(); });
 
 const course = { title: 'AI', term: 'Fall', number: '213-2', meets: 'TuTh 14:00-15:20' } satisfies Course;
