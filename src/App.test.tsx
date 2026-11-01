@@ -6,9 +6,10 @@ import type { Schedule } from './types/schedule';
 
 const service = vi.hoisted(() => ({
   unsubscribe: vi.fn(),
+  save: vi.fn(),
   subscribe: vi.fn<(onData: (schedule: Schedule) => void, onError: (error: Error) => void) => () => void>(),
 }));
-vi.mock('./services/schedule', () => ({ subscribeToSchedule: service.subscribe }));
+vi.mock('./services/schedule', () => ({ subscribeToSchedule: service.subscribe, saveCourse: service.save }));
 
 const schedule: Schedule = {
   title: 'CS Courses for 2018-2019',
@@ -60,5 +61,25 @@ describe('App database integration', () => {
     act(() => onData({ ...schedule, title: 'Updated schedule' }));
     expect(screen.getByText('1 selected')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Select CS 101: AI' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('reflects saved database values without resetting selections or replacing an open draft', async () => {
+    renderApp();
+    const onData = service.subscribe.mock.calls[0][0];
+    act(() => onData(schedule));
+    fireEvent.click(screen.getByRole('button', { name: 'Select CS 101: AI' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Edit CS 101: AI' }));
+    fireEvent.change(screen.getByLabelText('Course title'), { target: { value: 'Saved course' } });
+    const updated = { ...schedule, courses: { ...schedule.courses, F101: { ...schedule.courses.F101, title: 'Saved course' } } };
+    service.save.mockImplementationOnce(async () => { onData(updated); });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('heading', { name: 'Saved course' })).toBeTruthy();
+    expect(screen.getByText('1 selected')).toBeTruthy();
+    fireEvent.click(screen.getByRole('link', { name: 'Edit CS 101: Saved course' }));
+    fireEvent.change(screen.getByLabelText('Course title'), { target: { value: 'Local draft' } });
+    act(() => onData({ ...updated, courses: { ...updated.courses, F101: { ...updated.courses.F101, title: 'Remote edit' } } }));
+    expect((screen.getByLabelText('Course title') as HTMLInputElement).value).toBe('Local draft');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByRole('heading', { name: 'Remote edit' })).toBeTruthy();
   });
 });

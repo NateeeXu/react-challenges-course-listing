@@ -1,8 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TermPage } from './TermPage';
 import type { Course } from '../types/course';
+import { saveCourse } from '../services/schedule';
+
+vi.mock('../services/schedule', () => ({ saveCourse: vi.fn() }));
+beforeEach(() => { vi.mocked(saveCourse).mockReset(); });
 
 const course = { title: 'AI', term: 'Fall', number: '213-2', meets: 'TuTh 14:00-15:20' } satisfies Course;
 const renderEditor = (initialCourse: Course = course) => render(
@@ -19,7 +23,7 @@ describe('course form validation', () => {
     expect((screen.getByLabelText('Course number') as HTMLInputElement).value).toBe('213-2');
     expect((screen.getByLabelText('Meeting times') as HTMLInputElement).value).toBe('TuTh 14:00-15:20');
     expect(screen.queryByRole('status')).toBeNull();
-    expect(screen.queryByRole('button', { name: /Submit|Save/i })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Submit' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('shows accessible title feedback during typing and removes it after correction', () => {
@@ -97,5 +101,59 @@ describe('course form validation', () => {
     await waitFor(() => expect((screen.getByLabelText('Term') as HTMLSelectElement).value).toBe('Fall'));
     expect((screen.getByLabelText('Course title') as HTMLInputElement).value).toBe('AI');
     expect(screen.queryByRole('status')).toBeNull();
+  });
+});
+
+describe('form submission', () => {
+  it('blocks unchanged, reverted and invalid drafts, including direct submit events', () => {
+    renderEditor();
+    const submit = screen.getByRole('button', { name: 'Submit' }) as HTMLButtonElement;
+    const form = screen.getByRole('form');
+    fireEvent.submit(form);
+    expect(saveCourse).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Course title'), { target: { value: 'Changed title' } });
+    expect(submit.disabled).toBe(false);
+    fireEvent.change(screen.getByLabelText('Course title'), { target: { value: ' AI ' } });
+    expect(submit.disabled).toBe(true);
+    fireEvent.submit(form);
+    fireEvent.change(screen.getByLabelText('Meeting times'), { target: { value: 'bad' } });
+    fireEvent.submit(form);
+    expect(submit.disabled).toBe(true);
+    expect(saveCourse).not.toHaveBeenCalled();
+  });
+
+  it('saves valid changes once, waits for confirmation, then returns to the list', async () => {
+    let finish!: () => void;
+    vi.mocked(saveCourse).mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
+    renderEditor();
+    fireEvent.change(screen.getByLabelText('Course title'), { target: { value: ' New title ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(screen.getByRole('button', { name: 'Saving…' })).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Cancel' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByLabelText('Course title') as HTMLInputElement).closest('fieldset')?.disabled).toBe(true);
+    fireEvent.submit(screen.getByRole('form'));
+    expect(saveCourse).toHaveBeenCalledTimes(1);
+    expect(saveCourse).toHaveBeenCalledWith('F213-2', course, { ...course, title: 'New title' });
+    finish();
+    expect(await screen.findByRole('heading', { name: 'Fall' })).toBeTruthy();
+  });
+
+  it('keeps the draft on failure and allows retry', async () => {
+    vi.mocked(saveCourse).mockRejectedValueOnce(new Error('Permission denied')).mockResolvedValueOnce();
+    renderEditor();
+    fireEvent.change(screen.getByLabelText('Course title'), { target: { value: 'New title' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Permission denied');
+    expect((screen.getByLabelText('Course title') as HTMLInputElement).value).toBe('New title');
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await screen.findByRole('heading', { name: 'Fall' });
+    expect(saveCourse).toHaveBeenCalledTimes(2);
+  });
+
+  it('never saves on Cancel', () => {
+    renderEditor();
+    fireEvent.change(screen.getByLabelText('Course title'), { target: { value: 'New title' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(saveCourse).not.toHaveBeenCalled();
   });
 });

@@ -37,6 +37,9 @@ export const courseSchema = z.object({
 export type Course = z.infer<typeof courseSchema>;
 // Form inputs may contain invalid strings while the user is editing them.
 export type CourseDraft = Record<keyof Course, string>;
+export const coursesEqual = (left: CourseDraft, right: CourseDraft) =>
+  left.title === right.title && left.term === right.term &&
+  left.number === right.number && left.meets === right.meets;
 export type CourseErrors = Partial<Record<keyof Course, { type: 'validation'; message: string }>>;
 
 interface CourseResolution {

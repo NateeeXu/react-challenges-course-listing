@@ -1,6 +1,25 @@
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, FieldPath, onSnapshot, runTransaction } from 'firebase/firestore';
 import { database } from './firebase';
 import { parseSchedule, scheduleDocumentId, type Schedule } from '../types/schedule';
+import { courseSchema, coursesEqual, type Course } from '../types/course';
+
+export const saveCourse = async (courseId: string, original: Course, draft: Course): Promise<void> => {
+  const values = courseSchema.parse(draft);
+  if (coursesEqual(original, values)) return;
+
+  const reference = doc(database, 'schedules', scheduleDocumentId);
+  await runTransaction(database, async (transaction) => {
+    const snapshot = await transaction.get(reference);
+    if (!snapshot.exists()) throw new Error('This schedule no longer exists. Reload the page.');
+    const { courses } = parseSchedule(snapshot.data());
+    if (!Object.hasOwn(courses, courseId)) throw new Error('This course no longer exists. Return to the course list.');
+    if (!coursesEqual(courses[courseId], original)) {
+      throw new Error('This course changed while you were editing. Reload the page to review the latest version.');
+    }
+    // FieldPath keeps the course ID literal and preserves every other course.
+    transaction.update(reference, new FieldPath('courses', courseId), values, 'lastEditedCourseId', courseId);
+  });
+};
 
 export const subscribeToSchedule = (
   onData: (schedule: Schedule) => void,

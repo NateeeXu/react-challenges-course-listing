@@ -1,10 +1,48 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Only this public sample schedule is readable. No client can write it.
+    function minutes(time) {
+      let parts = time.split(':');
+      return int(parts[0]) * 60 + int(parts[1]);
+    }
+
+    function validTimes(meets) {
+      let parts = meets.split(' +');
+      let span = parts[1].split('-');
+      return !parts[0].matches('.*M.*M.*') && !parts[0].matches('.*Tu.*Tu.*')
+        && !parts[0].matches('.*W.*W.*') && !parts[0].matches('.*Th.*Th.*')
+        && !parts[0].matches('.*F.*F.*') && minutes(span[0]) < minutes(span[1]);
+    }
+
+    function validCourse(course) {
+      return course is map && course.keys().hasAll(['title', 'term', 'number', 'meets'])
+        && course.keys().hasOnly(['title', 'term', 'number', 'meets'])
+        && course.title is string && course.title.trim().size() >= 2
+        && course.term in ['Fall', 'Winter', 'Spring', 'Summer']
+        && course.number is string && course.number.matches('[0-9]+(-[0-9]+)?')
+        && course.meets is string
+        && (course.meets == '' || (
+          course.meets.matches('(Tu|Th|M|W|F)+ +([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]')
+          && validTimes(course.meets)));
+    }
+
+    // Coursework demo: visitors may edit ONE existing course per request.
+    // Authentication/administrator restrictions are a separate challenge.
     match /schedules/CS-2018-2019 {
       allow get: if true;
-      allow list, create, update, delete: if false;
+      allow update: if validUpdate();
+      allow list, create, delete: if false;
+
+      function validUpdate() {
+        let next = request.resource.data;
+        let id = next.lastEditedCourseId;
+        let changed = next.courses.diff(resource.data.courses).affectedKeys();
+        return id is string && id in resource.data.courses
+          && next.diff(resource.data).affectedKeys().hasOnly(['courses', 'lastEditedCourseId'])
+          && next.courses.keys() == resource.data.courses.keys()
+          && changed.size() == 1 && changed.hasOnly([id])
+          && validCourse(next.courses[id]);
+      }
     }
 
     match /{document=**} {

@@ -1,9 +1,11 @@
 import { fireEvent, render as renderComponent, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { TermPage } from './TermPage';
 import type { Course } from '../types/course';
+
+vi.mock('../services/schedule', () => ({ saveCourse: vi.fn() }));
 
 function render(component: ReactElement, path = '/') {
   return renderComponent(<MemoryRouter initialEntries={[path]}>{component}</MemoryRouter>);
@@ -154,7 +156,7 @@ describe('TermPage', () => {
     const title = await screen.findByRole('textbox', { name: 'Course title' }) as HTMLInputElement;
     expect(title.value).toBe('Fall course');
     expect((screen.getByRole('textbox', { name: 'Meeting times' }) as HTMLInputElement).value).toBe('MWF 9:00-9:50');
-    expect(screen.queryByRole('button', { name: /Submit|Save/i })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Submit' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole('heading', { name: 'Edit course' })).toBe(document.activeElement);
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -183,13 +185,13 @@ describe('TermPage', () => {
     expect((screen.getByRole('textbox', { name: 'Meeting times' }) as HTMLInputElement).value).toBe('MWF 10:00-10:50');
   });
 
-  it('prevents form submission without changing the original schedule', () => {
+  it('prevents invalid form submission without changing the original schedule', () => {
     render(<TermPage courses={courses} />, '/courses/F101/edit');
-    fireEvent.change(screen.getByRole('textbox', { name: 'Course title' }), { target: { value: 'Unsaved draft' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Course title' }), { target: { value: 'X' } });
     const event = new Event('submit', { bubbles: true, cancelable: true });
     fireEvent(screen.getByRole('form', { name: 'Edit course' }), event);
     expect(event.defaultPrevented).toBe(true);
-    expect((screen.getByRole('textbox', { name: 'Course title' }) as HTMLInputElement).value).toBe('Unsaved draft');
+    expect((screen.getByRole('textbox', { name: 'Course title' }) as HTMLInputElement).value).toBe('X');
     expect(courses.F101.title).toBe('Fall course');
     expect(screen.getByRole('button', { name: 'Cancel' }).getAttribute('type')).toBe('button');
   });

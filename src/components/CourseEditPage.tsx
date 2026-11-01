@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { courseResolver, courseTerms, type Course, type CourseDraft } from '../types/course';
+import { courseResolver, courseSchema, coursesEqual, courseTerms, type Course, type CourseDraft } from '../types/course';
+import { saveCourse } from '../services/schedule';
 
 interface CourseEditPageProps {
   courses: Record<string, Course>;
@@ -10,7 +11,7 @@ export function CourseEditPage({ courses }: CourseEditPageProps) {
   const { courseId } = useParams();
   const course = courseId && Object.hasOwn(courses, courseId) ? courses[courseId] : undefined;
 
-  if (!course) {
+  if (!course || !courseId) {
     return (
       <section className="subject-list">
         <h2>Course not found</h2>
@@ -21,18 +22,25 @@ export function CourseEditPage({ courses }: CourseEditPageProps) {
   }
 
   // A different course gets a fresh draft, even when navigating between edit URLs.
-  return <CourseForm key={courseId} course={course} />;
+  return <CourseForm key={courseId} courseId={courseId} course={course} />;
 }
 
-function CourseForm({ course }: { course: Course }) {
+function CourseForm({ courseId, course }: { courseId: string; course: Course }) {
+  const [original] = useState(course);
   const [draft, setDraft] = useState<CourseDraft>(course);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const savingRef = useRef(false);
   const [touched, setTouched] = useState<Partial<Record<keyof Course, boolean>>>({});
   const { errors } = courseResolver(draft);
+  const parsed = courseSchema.safeParse(draft);
+  const canSubmit = parsed.success && !coursesEqual(original, parsed.data) && !isSaving;
   const navigate = useNavigate();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const touch = (field: keyof Course) => setTouched((current) => ({ ...current, [field]: true }));
   const update = (field: keyof Course, value: string) => {
     setDraft((current) => ({ ...current, [field]: value }));
+    setSaveError('');
     touch(field);
   };
   const errorFor = (field: keyof Course) => touched[field] ? errors[field]?.message : undefined;
@@ -53,47 +61,70 @@ function CourseForm({ course }: { course: Course }) {
             Edit course
           </h2>
           <p id="edit-course-note" className="mt-3 mb-0 text-sm leading-6 text-[var(--muted)]">
-            Try editing the details below. Changes are not saved yet.
+            Edit the course details, then submit to save your changes.
           </p>
         </div>
         <form
           aria-labelledby="edit-course-heading"
           aria-describedby="edit-course-note"
           noValidate
-          onSubmit={(event) => {
+          aria-busy={isSaving}
+          onSubmit={async (event) => {
             event.preventDefault();
             setTouched({ title: true, term: true, number: true, meets: true });
+            if (!parsed.success || !canSubmit || savingRef.current) return;
+            savingRef.current = true;
+            setIsSaving(true);
+            setSaveError('');
+            try {
+              await saveCourse(courseId, original, parsed.data);
+              navigate('/');
+            } catch (error) {
+              setSaveError(error instanceof Error ? error.message : 'Unable to save. Please try again.');
+            } finally {
+              savingRef.current = false;
+              setIsSaving(false);
+            }
           }}
           className="grid gap-6 px-6 py-7 sm:px-9"
         >
-          <CourseTextField field="title" label="Course title" value={draft.title}
-            error={errorFor('title')} onChange={update} onBlur={touch} />
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="grid content-start gap-2">
-              <label htmlFor="course-term" className="text-sm font-semibold text-[var(--ink)]">Term</label>
-              <select id="course-term" name="term" value={draft.term}
-                onChange={(event) => update('term', event.target.value)} onBlur={() => touch('term')}
-                aria-invalid={Boolean(errorFor('term'))}
-                aria-describedby={errorFor('term') ? 'course-term-error' : undefined}
-                className={fieldClassName(Boolean(errorFor('term')))}>
-                <option value="">Choose a term</option>
-                {courseTerms.map((term) => <option key={term} value={term}>{term}</option>)}
-              </select>
-              {errorFor('term') && <p id="course-term-error" role="status" className="m-0 text-sm text-[#9b3326]">{errorFor('term')}</p>}
+          <fieldset disabled={isSaving} className="m-0 grid min-w-0 gap-6 border-0 p-0">
+            <CourseTextField field="title" label="Course title" value={draft.title}
+              error={errorFor('title')} onChange={update} onBlur={touch} />
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid content-start gap-2">
+                <label htmlFor="course-term" className="text-sm font-semibold text-[var(--ink)]">Term</label>
+                <select id="course-term" name="term" value={draft.term}
+                  onChange={(event) => update('term', event.target.value)} onBlur={() => touch('term')}
+                  aria-invalid={Boolean(errorFor('term'))}
+                  aria-describedby={errorFor('term') ? 'course-term-error' : undefined}
+                  className={fieldClassName(Boolean(errorFor('term')))}>
+                  <option value="">Choose a term</option>
+                  {courseTerms.map((term) => <option key={term} value={term}>{term}</option>)}
+                </select>
+                {errorFor('term') && <p id="course-term-error" role="status" className="m-0 text-sm text-[#9b3326]">{errorFor('term')}</p>}
+              </div>
+              <CourseTextField field="number" label="Course number" value={draft.number}
+                error={errorFor('number')} help="For example: 213 or 213-2."
+                onChange={update} onBlur={touch} />
             </div>
-            <CourseTextField field="number" label="Course number" value={draft.number}
-              error={errorFor('number')} help="For example: 213 or 213-2."
+            <CourseTextField field="meets" label="Meeting times" value={draft.meets}
+              error={errorFor('meets')} help="For example: MWF 9:00-9:50 or TuTh 14:00-15:20. Leave blank for TBA."
               onChange={update} onBlur={touch} />
-          </div>
-          <CourseTextField field="meets" label="Meeting times" value={draft.meets}
-            error={errorFor('meets')} help="For example: MWF 9:00-9:50 or TuTh 14:00-15:20. Leave blank for TBA."
-            onChange={update} onBlur={touch} />
+          </fieldset>
+          {saveError && <p role="alert" className="m-0 text-sm text-[#9b3326]">{saveError}</p>}
           <div className="flex items-center justify-between gap-4 border-t border-[var(--line)] pt-5">
             <p className="m-0 text-xs text-[var(--muted)]">Cancel discards your edits.</p>
-            <button type="button" onClick={() => navigate('/')}
-              className="cursor-pointer rounded-full bg-[var(--ink)] px-6 py-2.5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
-              Cancel
-            </button>
+            <div className="flex gap-3">
+              <button type="button" disabled={isSaving} onClick={() => navigate('/')}
+                className="cursor-pointer rounded-full border border-[var(--line)] px-5 py-2.5 text-sm font-semibold text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
+                Cancel
+              </button>
+              <button type="submit" disabled={!canSubmit}
+                className="cursor-pointer rounded-full bg-[var(--ink)] px-6 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
+                {isSaving ? 'Saving…' : 'Submit'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
