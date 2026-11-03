@@ -77,4 +77,8 @@ The tricky part was keeping editing permissions in sync when accounts or roles c
 - 167 tests passed across 12 files. Production build and changed-file lint passed with the documented override for the pre-existing unavailable ESLint rule.
 - 56 synthetic database-rule cases passed, including admin writes, non-admin/guest denials, role privacy and attempts to change roles.
 - The deployed member view was verified: an ordinary signed-in user sees Read only, can select courses, has no Edit links, and cannot open the editor by URL.
-- Administrator assignment and administrator browser checks are pending the owner's designation of an administrator account.
+- The owner designated their existing Google account as administrator. Its Firebase UID was resolved through the owner-authenticated helper and assigned `admin: true`; no UID or email is hardcoded into the frontend.
+- Granting the role changed the open member-only screen into an editor without a reload. A real administrator save persisted after reloading, and the original course was restored through the same Submit flow.
+- A temporary revocation immediately closed the editor and discarded its unsaved draft. Administrator access was then restored and verified, leaving the designated account with administrator access.
+- An independent production check confirmed public schedule reads return HTTP 200, anonymous course edits and role listing return HTTP 403, and all 91 course records/title/order match the before-test snapshot after restoring edits.
+- The app and rules are deployed to https://xiance-cs392-courses-2026.web.app/. Screenshots: `/Users/natecece/.codex/visualizations/2026/11/03/role-admin.png` and `/Users/natecece/.codex/visualizations/2026/11/03/role-member-blocked.png`.
