@@ -9,7 +9,7 @@ interface CourseEditPageProps {
 }
 
 export function CourseEditPage({ courses }: CourseEditPageProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAdmin, isRoleLoading } = useAuth();
   const { courseId } = useParams();
   const course = courseId && Object.hasOwn(courses, courseId) ? courses[courseId] : undefined;
 
@@ -17,7 +17,16 @@ export function CourseEditPage({ courses }: CourseEditPageProps) {
   if (!user) return (
     <section className="subject-list">
       <h2>Sign in to edit courses</h2>
-      <p className="m-0 text-[var(--muted)]">Use the Google sign-in button above, or return to browsing courses.</p>
+      <p className="m-0 text-[var(--muted)]">Sign in with an administrator account, or return to browsing courses.</p>
+      <Link to="/" className="text-[var(--accent)] underline">Return to courses</Link>
+    </section>
+  );
+
+  if (isRoleLoading) return <p role="status" className="status-message">Checking editing permissions…</p>;
+  if (!isAdmin) return (
+    <section className="subject-list">
+      <h2>Administrator access required</h2>
+      <p className="m-0 text-[var(--muted)]">Only administrators can edit courses. You can still browse courses and build your plan.</p>
       <Link to="/" className="text-[var(--accent)] underline">Return to courses</Link>
     </section>
   );

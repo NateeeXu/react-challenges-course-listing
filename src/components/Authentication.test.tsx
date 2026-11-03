@@ -17,6 +17,9 @@ vi.mock('../services/auth', () => ({
   signInWithGoogle: service.signIn, signOutUser: service.signOut,
   authErrorMessage: () => 'Sign-in was cancelled. You can try again.',
 }));
+vi.mock('../services/roles', () => ({ subscribeToRole: (_uid: string, onRole: (isAdmin: boolean) => void) => {
+  onRole(true); return () => {};
+} }));
 vi.mock('../services/schedule', () => ({
   saveCourse: service.save,
   subscribeToSchedule: (onData: (data: unknown) => void) => {
@@ -46,7 +49,7 @@ describe('Authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
     await screen.findByRole('button', { name: 'Sign out' });
     expect(screen.getByRole('link', { name: 'Edit CS 101: AI' })).toBeTruthy();
-    expect(screen.getByText('Signed in as Student')).toBeTruthy();
+    expect(screen.getByText('Signed in as Student · Administrator')).toBeTruthy();
     service.signOut.mockImplementationOnce(async () => { service.onUser(null); });
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     await screen.findByRole('button', { name: 'Sign in with Google' });

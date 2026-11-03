@@ -11,6 +11,7 @@ const firebase = vi.hoisted(() => ({
   database: {},
   authentication: { currentUser: { uid: 'test-user' } as { uid: string } | null },
   reference: {},
+  roleReference: {},
   doc: vi.fn(),
   unsubscribe: vi.fn(),
   onSnapshot: vi.fn<(
@@ -20,6 +21,7 @@ const firebase = vi.hoisted(() => ({
   ) => () => void>(),
   runTransaction: vi.fn(),
   get: vi.fn(),
+  getRole: vi.fn(),
   update: vi.fn(),
 }));
 
@@ -37,10 +39,14 @@ const data = {
 beforeEach(() => {
   vi.clearAllMocks();
   firebase.authentication.currentUser = { uid: 'test-user' };
-  firebase.doc.mockReturnValue(firebase.reference);
+  firebase.doc.mockImplementation((_database, collection) => collection === 'users' ? firebase.roleReference : firebase.reference);
   firebase.onSnapshot.mockReturnValue(firebase.unsubscribe);
   firebase.get.mockResolvedValue({ exists: () => true, data: () => data });
-  firebase.runTransaction.mockImplementation(async (_db, callback) => callback({ get: firebase.get, update: firebase.update }));
+  firebase.getRole.mockResolvedValue({ exists: () => true, data: () => ({ admin: true }) });
+  firebase.runTransaction.mockImplementation(async (_db, callback) => callback({
+    get: (reference: unknown) => reference === firebase.roleReference ? firebase.getRole() : firebase.get(reference),
+    update: firebase.update,
+  }));
 });
 
 describe('saveCourse', () => {
@@ -51,6 +57,28 @@ describe('saveCourse', () => {
     firebase.authentication.currentUser = null;
     await expect(saveCourse('F101', original, changed)).rejects.toThrow('Sign in to edit courses.');
     expect(firebase.runTransaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { exists: () => false, data: () => ({}) },
+    { exists: () => true, data: () => ({ admin: false }) },
+    { exists: () => true, data: () => ({}) },
+    { exists: () => true, data: () => ({ admin: 'true' }) },
+  ])('rejects users without a true administrator role before reading courses', async (role) => {
+    firebase.getRole.mockResolvedValue(role);
+    await expect(saveCourse('F101', original, changed)).rejects.toThrow('Administrator access is required');
+    expect(firebase.get).not.toHaveBeenCalled();
+    expect(firebase.update).not.toHaveBeenCalled();
+    expect(firebase.doc).toHaveBeenCalledWith(firebase.database, 'users', 'test-user');
+  });
+
+  it('rejects an account change during a pending save', async () => {
+    firebase.get.mockImplementationOnce(async () => {
+      firebase.authentication.currentUser = { uid: 'another-user' };
+      return { exists: () => true, data: () => data };
+    });
+    await expect(saveCourse('F101', original, changed)).rejects.toThrow('Your sign-in changed');
+    expect(firebase.update).not.toHaveBeenCalled();
   });
 
   it('validates before writing and skips unchanged normalized values', async () => {

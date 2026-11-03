@@ -11,10 +11,14 @@ const before = { title: 'Example', courseOrder: ['F101', 'W101'], courses: {
 } };
 const changed = { ...before, courses: { ...before.courses, F101: { ...course, title: 'New title' } }, lastEditedCourseId: 'F101' };
 const cases = [];
+const roleMocks = (admin, exists = true) => [
+  { function: 'exists', args: [{ exactValue: '/databases/(default)/documents/users/signed-in-student' }], result: { value: exists } },
+  { function: 'get', args: [{ exactValue: '/databases/(default)/documents/users/signed-in-student' }], result: { value: { data: admin === undefined ? {} : { admin } } } },
+];
 const add = (label, expectation, data, method = 'update', target = path) => {
   cases.push({ label, test: { expectation, request: { method, path: target, resource: { data },
     auth: { uid: 'signed-in-student', token: { firebase: { sign_in_provider: 'google.com' } } },
-  }, resource: { data: before } } });
+  }, resource: { data: before }, functionMocks: roleMocks(true) } });
 };
 const edit = (patch) => ({ ...changed, courses: { ...changed.courses, F101: { ...changed.courses.F101, ...patch } } });
 
@@ -59,6 +63,28 @@ for (const [label, expectation, method, data] of [
   add(label, expectation, data, method);
   delete cases.at(-1).test.request.auth;
 }
+for (const [label, admin, exists] of [
+  ['ordinary signed-in user cannot edit', false, true],
+  ['no role document cannot edit', undefined, false],
+  ['no admin field cannot edit', undefined, true],
+  ['string admin cannot edit', 'true', true],
+  ['revoked admin cannot edit', false, true],
+]) {
+  add(label, 'DENY', changed);
+  cases.at(-1).test.functionMocks = roleMocks(admin, exists);
+}
+add('token admin claim alone cannot grant access', 'DENY', changed);
+cases.at(-1).test.request.auth.token.admin = true;
+cases.at(-1).test.functionMocks = roleMocks(false);
+const selfRole = '/databases/(default)/documents/users/signed-in-student';
+add('read own role', 'ALLOW', { admin: true }, 'get', selfRole);
+add('read another role', 'DENY', { admin: true }, 'get', '/databases/(default)/documents/users/other-user');
+add('list roles', 'DENY', { admin: true }, 'list', '/databases/(default)/documents/users');
+for (const method of ['create', 'update', 'delete']) add(`admin cannot ${method} roles`, 'DENY', { admin: true }, method, selfRole);
+add('ordinary user cannot promote self', 'DENY', { admin: true }, 'update', selfRole);
+cases.at(-1).test.functionMocks = roleMocks(false);
+add('signed-out role read', 'DENY', { admin: true }, 'get', selfRole);
+delete cases.at(-1).test.request.auth;
 
 const main = async () => {
   const binary = process.env.PATH.split(delimiter).map((directory) => join(directory, 'firebase')).find(existsSync);

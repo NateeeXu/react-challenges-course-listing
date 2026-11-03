@@ -12,6 +12,9 @@ vi.mock('./services/auth', () => ({
   },
   signInWithGoogle: vi.fn(), signOutUser: vi.fn(), authErrorMessage: () => 'Authentication failed.',
 }));
+vi.mock('./services/roles', () => ({ subscribeToRole: (_uid: string, onRole: (isAdmin: boolean) => void) => {
+  onRole(true); return () => {};
+} }));
 
 const service = vi.hoisted(() => ({
   unsubscribe: vi.fn(),

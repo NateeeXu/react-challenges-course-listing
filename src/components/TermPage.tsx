@@ -12,7 +12,7 @@ interface TermPageProps {
 }
 
 export function TermPage({ courses }: TermPageProps) {
-  const { user, isLoading } = useAuth();
+  const { isAdmin, isRoleLoading } = useAuth();
   const [selectedTerm, setSelectedTerm] = useState<Term>('Fall');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [isPlanOpen, setIsPlanOpen] = useState(false);
@@ -68,7 +68,7 @@ export function TermPage({ courses }: TermPageProps) {
                 key={id}
                 courseId={id}
                 course={course}
-                canEdit={Boolean(user) && !isLoading}
+                canEdit={isAdmin && !isRoleLoading}
                 selected={selected}
                 conflict={conflict}
                 onToggle={() => toggleCourse(id)}

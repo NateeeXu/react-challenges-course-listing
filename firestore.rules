@@ -26,10 +26,22 @@ service cloud.firestore {
           && validTimes(course.meets)));
     }
 
-    // Anyone may read; only authenticated users may edit one valid existing course.
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('admin', false) == true;
+    }
+
+    // Role assignments are managed by the project owner, never by browser clients.
+    match /users/{userId} {
+      allow get: if request.auth != null && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+
+    // Anyone may read; only administrators may edit one valid existing course.
     match /schedules/CS-2018-2019 {
       allow get: if true;
-      allow update: if request.auth != null && validUpdate();
+      allow update: if isAdmin() && validUpdate();
       allow list, create, delete: if false;
 
       function validUpdate() {
