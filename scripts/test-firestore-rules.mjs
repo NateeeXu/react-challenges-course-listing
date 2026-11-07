@@ -86,6 +86,46 @@ cases.at(-1).test.functionMocks = roleMocks(false);
 add('signed-out role read', 'DENY', { admin: true }, 'get', selfRole);
 delete cases.at(-1).test.request.auth;
 
+const planCase = (label, expectation, data, method = 'update', owner = 'signed-in-student') => {
+  add(label, expectation, data, method, `/databases/(default)/documents/users/${owner}/plans/CS-2018-2019`);
+  const test = cases.at(-1).test;
+  test.resource = { data: { selectedCourseIds: ['F101'], revision: 1 } };
+  test.functionMocks.push({ function: 'get', args: [{ exactValue: path }], result: { value: { data: before } } });
+  return test;
+};
+const nextPlan = { selectedCourseIds: ['F101', 'W101'], revision: 2 };
+planCase('save own personal plan', 'ALLOW', nextPlan);
+planCase('clear own plan', 'ALLOW', { selectedCourseIds: [], revision: 2 });
+planCase('create own first plan', 'ALLOW', { selectedCourseIds: ['F101'], revision: 1 }, 'create');
+planCase('read own plan', 'ALLOW', nextPlan, 'get');
+const memberPlan = planCase('ordinary member can save own plan', 'ALLOW', nextPlan);
+memberPlan.functionMocks[0] = roleMocks(false)[0];
+memberPlan.functionMocks[1] = roleMocks(false)[1];
+for (const method of ['get', 'create', 'update', 'delete']) {
+  planCase(`admin cannot ${method} another users plan`, 'DENY', nextPlan, method, 'other-user');
+  const guestPlan = planCase(`guest cannot ${method} a saved plan`, 'DENY', nextPlan, method);
+  delete guestPlan.request.auth;
+}
+planCase('cannot delete own plan document', 'DENY', nextPlan, 'delete');
+for (const [label, data] of [
+  ['duplicate course IDs', { selectedCourseIds: ['F101', 'F101'], revision: 2 }],
+  ['unknown course ID', { selectedCourseIds: ['MISSING'], revision: 2 }],
+  ['nonstring course ID', { selectedCourseIds: [123], revision: 2 }],
+  ['nonlist selections', { selectedCourseIds: 'F101', revision: 2 }],
+  ['extra role field', { ...nextPlan, admin: true }],
+  ['missing selections', { revision: 2 }],
+  ['missing revision', { selectedCourseIds: ['F101'] }],
+  ['unchanged revision', { ...nextPlan, revision: 1 }],
+  ['skipped revision', { ...nextPlan, revision: 3 }],
+  ['noninteger revision', { ...nextPlan, revision: 1.5 }],
+  ['oversized plan', { selectedCourseIds: Array(501).fill('F101'), revision: 2 }],
+]) planCase(`reject plan with ${label}`, 'DENY', data);
+planCase('new plan must start at revision one', 'DENY', nextPlan, 'create');
+const wrongSchedule = planCase('unsupported schedule plan denied', 'DENY', nextPlan);
+wrongSchedule.request.path = '/databases/(default)/documents/users/signed-in-student/plans/OTHER';
+const listPlans = planCase('listing plans denied', 'DENY', nextPlan, 'list');
+listPlans.request.path = '/databases/(default)/documents/users/signed-in-student/plans';
+
 const main = async () => {
   const binary = process.env.PATH.split(delimiter).map((directory) => join(directory, 'firebase')).find(existsSync);
   if (!binary) throw new Error('Run with: npm exec --package=firebase-tools -- node scripts/test-firestore-rules.mjs');

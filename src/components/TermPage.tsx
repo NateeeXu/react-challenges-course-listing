@@ -6,15 +6,30 @@ import { TermSelector, type Term } from './TermSelector';
 import { SchedulePopup } from './SchedulePopup';
 import { coursesConflict } from '../utilities/time-conflicts';
 import { useAuth } from '../hooks/useAuth';
+import { usePersonalPlan } from '../hooks/usePersonalPlan';
 
 interface TermPageProps {
   courses: Record<string, Course>;
 }
 
 export function TermPage({ courses }: TermPageProps) {
-  const { isAdmin, isRoleLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const [selectedTerm, setSelectedTerm] = useState<Term>('Fall');
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  return <AccountTermPage key={user?.uid ?? 'guest'} courses={courses} uid={user?.uid ?? null}
+    authLoading={isLoading} selectedTerm={selectedTerm} onSelectTerm={setSelectedTerm} />;
+}
+
+interface AccountTermPageProps extends TermPageProps {
+  uid: string | null;
+  authLoading: boolean;
+  selectedTerm: Term;
+  onSelectTerm: (term: Term) => void;
+}
+
+function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm }: AccountTermPageProps) {
+  const { isAdmin, isRoleLoading } = useAuth();
+  const plan = usePersonalPlan(uid);
+  const selectedCourseIds = plan.selectedCourseIds.filter((id) => Object.hasOwn(courses, id));
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const visibleCourses = Object.entries(courses).filter(
     ([, course]) => course.term === selectedTerm,
@@ -23,21 +38,11 @@ export function TermPage({ courses }: TermPageProps) {
     ([id]) => selectedCourseIds.includes(id),
   );
 
-  const toggleCourse = (id: string) => {
-    setSelectedCourseIds((current) => {
-      if (current.includes(id)) return current.filter((courseId) => courseId !== id);
-      if (current.some((selectedId) => coursesConflict(courses[id], courses[selectedId]))) {
-        return current;
-      }
-      return [...current, id];
-    });
-  };
-
   // Keep list state above the route switch so Cancel does not clear the plan.
   const courseList = (
     <div className="subject-list">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <TermSelector selectedTerm={selectedTerm} onSelect={setSelectedTerm} />
+        <TermSelector selectedTerm={selectedTerm} onSelect={onSelectTerm} />
         <div className="flex items-center gap-3">
           <p className="m-0 text-sm font-semibold text-[var(--ink)]" aria-live="polite">
             {selectedCourseIds.length} selected
@@ -51,6 +56,16 @@ export function TermPage({ courses }: TermPageProps) {
             Course plan
           </button>
         </div>
+      </div>
+      <div className="-mt-6 flex flex-wrap items-center gap-3">
+        <p role={plan.error ? 'alert' : 'status'} className={`m-0 text-xs ${plan.error ? 'text-[#9b3326]' : 'text-[var(--muted)]'}`}>
+          {authLoading ? 'Checking sign-in…' : plan.error || (plan.status === 'guest'
+            ? 'Temporary plan · sign in to load your saved plan.'
+            : plan.status === 'loading' ? 'Loading your saved plan…'
+              : plan.status === 'saving' ? 'Saving your plan…' : 'Your plan is saved automatically.')}
+        </p>
+        {!plan.ready && plan.error && <button type="button" onClick={plan.retryLoading}
+          className="cursor-pointer rounded border border-[var(--line)] px-3 py-1 text-xs font-semibold text-[var(--ink)]">Retry</button>}
       </div>
       <section className="subject-section" aria-labelledby="selected-term">
         <div className="subject-heading">
@@ -71,7 +86,8 @@ export function TermPage({ courses }: TermPageProps) {
                 canEdit={isAdmin && !isRoleLoading}
                 selected={selected}
                 conflict={conflict}
-                onToggle={() => toggleCourse(id)}
+                selectionDisabled={authLoading || !plan.ready}
+                onToggle={() => plan.toggleCourse(id, courses)}
               />
             );
           })}

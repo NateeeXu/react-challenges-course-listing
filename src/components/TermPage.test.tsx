@@ -6,6 +6,7 @@ import { TermPage } from './TermPage';
 import type { Course } from '../types/course';
 
 vi.mock('../services/schedule', () => ({ saveCourse: vi.fn() }));
+vi.mock('../services/personal-plan', () => import('../test-utils/personal-plan'));
 vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'test-user' }, isLoading: false, error: null, isAdmin: true, isRoleLoading: false, roleError: null }) }));
 
 function render(component: ReactElement, path = '/') {

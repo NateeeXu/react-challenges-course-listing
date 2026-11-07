@@ -8,10 +8,11 @@ interface CourseCardProps {
   canEdit: boolean;
   selected: boolean;
   conflict: boolean;
+  selectionDisabled?: boolean;
   onToggle: () => void;
 }
 
-export const CourseCard = ({ courseId, course, canEdit, selected, conflict, onToggle }: CourseCardProps) => (
+export const CourseCard = ({ courseId, course, canEdit, selected, conflict, selectionDisabled = false, onToggle }: CourseCardProps) => (
   <article
     className={`relative flex h-full min-w-0 flex-col overflow-hidden rounded-md border px-5 pt-5 pb-5 transition-colors sm:px-6 sm:pt-6 sm:pb-5 ${
       selected
@@ -25,7 +26,7 @@ export const CourseCard = ({ courseId, course, canEdit, selected, conflict, onTo
       type="button"
       aria-label={`Select CS ${course.number}: ${course.title}${conflict ? ' (time conflict)' : ''}`}
       aria-pressed={selected}
-      disabled={conflict && !selected}
+      disabled={selectionDisabled || (conflict && !selected)}
       onClick={onToggle}
       className="absolute inset-0 z-10 cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed"
     />

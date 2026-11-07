@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { AuthProvider } from './AuthProvider';
 import type { AuthUser } from '../services/auth';
+vi.mock('../services/personal-plan', () => import('../test-utils/personal-plan'));
 
 interface RoleListener {
   uid: string;

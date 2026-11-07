@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { Schedule } from './types/schedule';
 import { AuthProvider } from './components/AuthProvider';
+vi.mock('./services/personal-plan', () => import('./test-utils/personal-plan'));
 
 vi.mock('./services/auth', () => ({
   subscribeToAuth: (onUser: (user: { uid: string; displayName: string; email: null }) => void) => {

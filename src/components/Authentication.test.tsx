@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { AuthProvider } from './AuthProvider';
 import type { AuthUser } from '../services/auth';
+vi.mock('../services/personal-plan', () => import('../test-utils/personal-plan'));
 
 const service = vi.hoisted(() => ({
   onUser: (() => {}) as (user: AuthUser | null) => void,
@@ -42,7 +43,7 @@ describe('Authentication', () => {
     expect(screen.queryByRole('link', { name: /Edit CS/ })).toBeNull();
   });
 
-  it('updates editing permissions on login and logout without clearing the course plan', async () => {
+  it('updates editing permissions and isolates guest and signed-in plans', async () => {
     renderApp(); act(() => service.onUser(null));
     fireEvent.click(screen.getByRole('button', { name: 'Select CS 101: AI' }));
     service.signIn.mockImplementationOnce(async () => { service.onUser(student); });
@@ -54,7 +55,7 @@ describe('Authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     await screen.findByRole('button', { name: 'Sign in with Google' });
     expect(screen.queryByRole('link', { name: /Edit CS/ })).toBeNull();
-    expect(screen.getByText('1 selected')).toBeTruthy();
+    expect(screen.getByText('0 selected')).toBeTruthy();
   });
 
   it('guards direct edit URLs and removes an open form immediately after logout', () => {

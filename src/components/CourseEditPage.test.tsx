@@ -6,6 +6,7 @@ import type { Course } from '../types/course';
 import { saveCourse } from '../services/schedule';
 
 vi.mock('../services/schedule', () => ({ saveCourse: vi.fn() }));
+vi.mock('../services/personal-plan', () => import('../test-utils/personal-plan'));
 vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'test-user' }, isLoading: false, error: null, isAdmin: true, isRoleLoading: false, roleError: null }) }));
 beforeEach(() => { vi.mocked(saveCourse).mockReset(); });
 
