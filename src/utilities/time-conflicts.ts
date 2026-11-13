@@ -3,6 +3,8 @@ interface ScheduledCourse {
   meets: string;
 }
 
+export const meetingDays = { M: 'Monday', Tu: 'Tuesday', W: 'Wednesday', Th: 'Thursday', F: 'Friday' } as const;
+
 interface Meeting {
   days: string[];
   start: number;
@@ -14,26 +16,21 @@ function toMinutes(time: string) {
   return hours * 60 + minutes;
 }
 
-function parseMeeting(meets: string): Meeting {
-  const [days, times] = meets.trim().split(/\s+/);
-  const [start, end] = times.split('-').map(toMinutes);
-  return { days: days.match(/Tu|Th|M|W|F/g) ?? [], start, end };
-}
-
-function shareDay(first: Meeting, second: Meeting) {
-  return first.days.some((day) => second.days.includes(day));
-}
-
-function overlapInTime(first: Meeting, second: Meeting) {
-  return first.start < second.end && second.start < first.end;
+export function parseMeeting(meets: string): Meeting | null {
+  const match = /^((?:Tu|Th|M|W|F)+)\s+((?:[01]?\d|2[0-3]):[0-5]\d)-((?:[01]?\d|2[0-3]):[0-5]\d)$/.exec(meets.trim());
+  if (!match) return null;
+  const start = toMinutes(match[2]);
+  const end = toMinutes(match[3]);
+  if (start >= end) return null;
+  return { days: match[1].match(/Tu|Th|M|W|F/g) ?? [], start, end };
 }
 
 export function coursesConflict(first: ScheduledCourse, second: ScheduledCourse) {
-  if (first.term !== second.term || !first.meets.trim() || !second.meets.trim()) {
-    return false;
-  }
+  if (first.term !== second.term) return false;
 
   const firstMeeting = parseMeeting(first.meets);
   const secondMeeting = parseMeeting(second.meets);
-  return shareDay(firstMeeting, secondMeeting) && overlapInTime(firstMeeting, secondMeeting);
+  return Boolean(firstMeeting && secondMeeting &&
+    firstMeeting.days.some((day) => secondMeeting.days.includes(day)) &&
+    firstMeeting.start < secondMeeting.end && secondMeeting.start < firstMeeting.end);
 }

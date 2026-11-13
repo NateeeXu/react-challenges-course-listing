@@ -1,13 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Course } from './CourseCard';
+import { terms, type Term } from './TermSelector';
+import { WeeklyTimetable } from './WeeklyTimetable';
 
 interface SchedulePopupProps {
   courses: [string, Course][];
+  initialTerm: Term;
   onClose: () => void;
 }
 
-export function SchedulePopup({ courses, onClose }: SchedulePopupProps) {
+export function SchedulePopup({ courses, initialTerm, onClose }: SchedulePopupProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [view, setView] = useState<'list' | 'week'>('list');
+  const [term, setTerm] = useState(initialTerm);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -33,7 +38,7 @@ export function SchedulePopup({ courses, onClose }: SchedulePopupProps) {
     <dialog
       ref={dialogRef}
       aria-labelledby="course-plan-title"
-      className="fixed inset-0 m-auto max-h-[85dvh] w-[92vw] max-w-2xl overflow-y-auto rounded-xl border border-[var(--line)] bg-[#f4f7f5] p-0 text-[var(--ink)] shadow-xl backdrop:bg-[#172f2a]/50 backdrop:backdrop-blur-sm"
+      className={`fixed inset-0 m-auto max-h-[85dvh] w-[92vw] overflow-y-auto rounded-xl border border-[var(--line)] bg-[#f4f7f5] p-0 text-[var(--ink)] shadow-xl backdrop:bg-[#172f2a]/50 backdrop:backdrop-blur-sm ${view === 'week' ? 'max-w-5xl' : 'max-w-2xl'}`}
       onCancel={(event) => {
         event.preventDefault();
         closePopup();
@@ -61,6 +66,37 @@ export function SchedulePopup({ courses, onClose }: SchedulePopupProps) {
           </button>
         </div>
 
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div role="group" aria-label="Course plan view" className="inline-flex rounded-lg border border-[var(--line)] bg-white p-1">
+            {(['list', 'week'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={view === option}
+                onClick={() => setView(option)}
+                className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-semibold aria-pressed:bg-[var(--ink)] aria-pressed:text-white focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+              >
+                {option === 'list' ? 'List' : 'Weekly timetable'}
+              </button>
+            ))}
+          </div>
+          {view === 'week' && (
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              Timetable term
+              <select
+                value={term}
+                onChange={(event) => {
+                  const nextTerm = terms.find((option) => option === event.target.value);
+                  if (nextTerm) setTerm(nextTerm);
+                }}
+                className="rounded-md border border-[var(--line)] bg-white px-3 py-1.5 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+              >
+                {terms.map((option) => <option key={option}>{option}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+
         {courses.length === 0 ? (
           <div className="rounded-md border border-[var(--line)] bg-white p-5">
             <p className="m-0 font-semibold">No courses selected yet.</p>
@@ -69,6 +105,8 @@ export function SchedulePopup({ courses, onClose }: SchedulePopupProps) {
               Click a selected card again to remove it.
             </p>
           </div>
+        ) : view === 'week' ? (
+          <WeeklyTimetable courses={courses} term={term} />
         ) : (
           <ul className="m-0 grid list-none gap-3 p-0">
             {courses.map(([id, course]) => (

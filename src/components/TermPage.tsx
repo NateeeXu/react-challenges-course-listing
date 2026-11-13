@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, Route, Routes } from 'react-router';
 import { CourseEditPage } from './CourseEditPage';
 import { CourseCard, type Course } from './CourseCard';
@@ -15,8 +15,10 @@ interface TermPageProps {
 export function TermPage({ courses }: TermPageProps) {
   const { user, isLoading } = useAuth();
   const [selectedTerm, setSelectedTerm] = useState<Term>('Fall');
+  const [query, setQuery] = useState('');
   return <AccountTermPage key={user?.uid ?? 'guest'} courses={courses} uid={user?.uid ?? null}
-    authLoading={isLoading} selectedTerm={selectedTerm} onSelectTerm={setSelectedTerm} />;
+    authLoading={isLoading} selectedTerm={selectedTerm} onSelectTerm={setSelectedTerm}
+    query={query} onSearch={setQuery} />;
 }
 
 interface AccountTermPageProps extends TermPageProps {
@@ -24,16 +26,22 @@ interface AccountTermPageProps extends TermPageProps {
   authLoading: boolean;
   selectedTerm: Term;
   onSelectTerm: (term: Term) => void;
+  query: string;
+  onSearch: (query: string) => void;
 }
 
-function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm }: AccountTermPageProps) {
+function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm, query, onSearch }: AccountTermPageProps) {
   const { isAdmin, isRoleLoading } = useAuth();
   const plan = usePersonalPlan(uid);
   const selectedCourseIds = plan.selectedCourseIds.filter((id) => Object.hasOwn(courses, id));
   const [isPlanOpen, setIsPlanOpen] = useState(false);
-  const visibleCourses = Object.entries(courses).filter(
-    ([, course]) => course.term === selectedTerm,
-  );
+  const searchRef = useRef<HTMLInputElement>(null);
+  const keywords = query.toLowerCase().trim().replace(/\bcs(?=\d)/g, 'cs ').split(/\s+/).filter(Boolean);
+  const termCourses = Object.entries(courses).filter(([, course]) => course.term === selectedTerm);
+  const visibleCourses = termCourses.filter(([, course]) => {
+    const searchableText = `cs ${course.number} ${course.title.toLowerCase()}`;
+    return keywords.every((keyword) => searchableText.includes(keyword));
+  });
   const selectedCourses = Object.entries(courses).filter(
     ([id]) => selectedCourseIds.includes(id),
   );
@@ -68,10 +76,47 @@ function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm
           className="cursor-pointer rounded border border-[var(--line)] px-3 py-1 text-xs font-semibold text-[var(--ink)]">Retry</button>}
       </div>
       <section className="subject-section" aria-labelledby="selected-term">
+        <div className="mb-6">
+          <label htmlFor="course-search" className="mb-2 block text-sm font-semibold text-[var(--ink)]">
+            Search {selectedTerm} courses
+          </label>
+          <div className="flex max-w-lg gap-2">
+            <input
+              ref={searchRef}
+              id="course-search"
+              type="search"
+              placeholder="Course number or title"
+              value={query}
+              onChange={(event) => onSearch(event.target.value)}
+              className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-4 py-2.5 text-sm placeholder:text-[var(--muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  searchRef.current?.focus();
+                  onSearch('');
+                }}
+                className="cursor-pointer rounded-md border border-[var(--line)] bg-white px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        </div>
         <div className="subject-heading">
           <h2 id="selected-term">{selectedTerm}</h2>
-          <span>{visibleCourses.length}</span>
+          <span role="status">
+            {keywords.length > 0
+              ? `${visibleCourses.length} of ${termCourses.length} courses`
+              : `${termCourses.length} ${termCourses.length === 1 ? 'course' : 'courses'}`}
+          </span>
         </div>
+        {visibleCourses.length === 0 && (
+          <p className="m-0 rounded-md border border-[var(--line)] bg-white p-5 text-sm text-[var(--muted)]">
+            {keywords.length ? 'No matching courses. Try a different course number or title.' : 'No courses are available for this term.'}
+          </p>
+        )}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-stretch gap-3.5">
           {visibleCourses.map(([id, course]) => {
             const selected = selectedCourseIds.includes(id);
@@ -94,7 +139,7 @@ function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm
         </div>
       </section>
       {isPlanOpen && (
-        <SchedulePopup courses={selectedCourses} onClose={() => setIsPlanOpen(false)} />
+        <SchedulePopup courses={selectedCourses} initialTerm={selectedTerm} onClose={() => setIsPlanOpen(false)} />
       )}
     </div>
   );

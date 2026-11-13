@@ -87,6 +87,27 @@ describe('TermPage', () => {
     expect(screen.getByRole('button', { name: /Select CS 101/ }).getAttribute('aria-pressed')).toBe('false');
   });
 
+  it('searches the current term by title and course code without losing selections', () => {
+    render(<TermPage courses={courses} />);
+    const search = screen.getByRole('searchbox', { name: 'Search Fall courses' });
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 101:/ }));
+    fireEvent.change(search, { target: { value: '  CS102   ANOTHER ' } });
+    expect(screen.getByText('1 of 2 courses')).toBeTruthy();
+    expect(screen.getByText('Another fall course')).toBeTruthy();
+    expect(screen.queryByText('Fall course')).toBeNull();
+    expect(screen.getByText('1 selected')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Winter' }));
+    expect((screen.getByRole('searchbox', { name: 'Search Winter courses' }) as HTMLInputElement).value).toBe('  CS102   ANOTHER ');
+    expect(screen.getByText(/No matching courses/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(document.activeElement).toBe(search);
+    expect(screen.getByText('Winter course')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Fall' }));
+    expect(screen.getByRole('button', { name: /Select CS 101:/ }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('explains an empty plan, keeps content clicks open, and closes with the Close button', () => {
     render(<TermPage courses={courses} />);
     fireEvent.click(screen.getByRole('button', { name: 'Course plan' }));
@@ -148,6 +169,35 @@ describe('TermPage', () => {
     fireEvent.click(blocked);
     expect(screen.getByText('3 selected')).toBeTruthy();
     expect(blocked.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('plots selected courses on their meeting days and keeps TBA and other terms separate', () => {
+    render(<TermPage courses={{
+      ...courses,
+      F103: { term: 'Fall', number: '103', title: 'Independent study', meets: '' },
+      W202: { term: 'Winter', number: '202', title: 'Winter seminar', meets: 'TuTh 14:00-15:20' },
+    }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 101:/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 103:/ }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Winter' }));
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 202:/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Course plan' }));
+
+    const popup = within(screen.getByRole('dialog'));
+    fireEvent.click(popup.getByRole('button', { name: 'Weekly timetable' }));
+    const term = popup.getByRole('combobox', { name: 'Timetable term' }) as HTMLSelectElement;
+    expect(term.value).toBe('Winter');
+    expect(within(popup.getByRole('list', { name: 'Tuesday' })).getByText('14:00–15:20')).toBeTruthy();
+    expect(within(popup.getByRole('list', { name: 'Thursday' })).getByText('CS 202')).toBeTruthy();
+    expect(popup.queryByText('Fall course')).toBeNull();
+
+    fireEvent.change(term, { target: { value: 'Fall' } });
+    expect(popup.getAllByText('CS 101')).toHaveLength(3);
+    expect(popup.getByText('Meeting times TBA')).toBeTruthy();
+    expect(popup.getByText('CS 103 · Independent study')).toBeTruthy();
+    expect(popup.queryByText('Winter seminar')).toBeNull();
+    fireEvent.change(term, { target: { value: 'Spring' } });
+    expect(popup.getByText('No courses selected for Spring.')).toBeTruthy();
   });
 
   it('opens a prefilled edit form without selecting the course', async () => {
