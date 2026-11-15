@@ -126,6 +126,35 @@ wrongSchedule.request.path = '/databases/(default)/documents/users/signed-in-stu
 const listPlans = planCase('listing plans denied', 'DENY', nextPlan, 'list');
 listPlans.request.path = '/databases/(default)/documents/users/signed-in-student/plans';
 
+const note = { text: 'Ask about prerequisites.' };
+const noteCase = (label, expectation, method, data = note, owner = 'signed-in-student', courseId = 'F101') => {
+  add(label, expectation, data, method, `/databases/(default)/documents/users/${owner}/courseNotes/${courseId}`);
+  const test = cases.at(-1).test;
+  test.resource = { data: note };
+  test.functionMocks.push({ function: 'get', args: [{ exactValue: path }], result: { value: { data: before } } });
+  return test;
+};
+noteCase('read own course note', 'ALLOW', 'get');
+noteCase('save own course note with Unicode text', 'ALLOW', 'create', { text: '课'.repeat(1000) });
+noteCase('ordinary user updates own course note', 'ALLOW', 'update').functionMocks.splice(0, 2, ...roleMocks(false));
+noteCase('clear own course note', 'ALLOW', 'delete');
+for (const method of ['get', 'create', 'update', 'delete']) {
+  noteCase(`admin cannot ${method} another users note`, 'DENY', method, note, 'other-user');
+}
+for (const method of ['get', 'create']) {
+  const guest = noteCase(`guest cannot ${method} personal notes`, 'DENY', method);
+  delete guest.request.auth;
+}
+for (const [label, data] of [
+  ['long note', { text: 'x'.repeat(1001) }],
+  ['nonstring note', { text: 10 }],
+  ['blank note', { text: '   ' }],
+  ['note with extra field', { ...note, admin: true }],
+]) noteCase(label, 'DENY', 'update', data);
+noteCase('cannot write note for unknown course', 'DENY', 'create', note, 'signed-in-student', 'UNKNOWN');
+const listNotes = noteCase('listing notes denied', 'DENY', 'list');
+listNotes.request.path = `${selfRole}/courseNotes`;
+
 const main = async () => {
   const binary = process.env.PATH.split(delimiter).map((directory) => join(directory, 'firebase')).find(existsSync);
   if (!binary) throw new Error('Run with: npm exec --package=firebase-tools -- node scripts/test-firestore-rules.mjs');

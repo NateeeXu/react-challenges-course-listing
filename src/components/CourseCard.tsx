@@ -6,13 +6,16 @@ interface CourseCardProps {
   courseId: string;
   course: Course;
   canEdit: boolean;
+  canTakeNotes: boolean;
   selected: boolean;
   conflict: boolean;
   selectionDisabled?: boolean;
   onToggle: () => void;
 }
 
-export const CourseCard = ({ courseId, course, canEdit, selected, conflict, selectionDisabled = false, onToggle }: CourseCardProps) => (
+const actionClassName = 'relative z-20 rounded px-2 py-1 text-sm font-semibold text-[var(--ink)] underline decoration-[var(--line)] underline-offset-4 hover:decoration-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]';
+
+export const CourseCard = ({ courseId, course, canEdit, canTakeNotes, selected, conflict, selectionDisabled = false, onToggle }: CourseCardProps) => (
   <article
     className={`relative flex h-full min-w-0 flex-col overflow-hidden rounded-md border px-5 pt-5 pb-5 transition-colors sm:px-6 sm:pt-6 sm:pb-5 ${
       selected
@@ -62,12 +65,23 @@ export const CourseCard = ({ courseId, course, canEdit, selected, conflict, sele
         </dd>
       </div>
     </dl>
-    {canEdit && <Link
-      to={`/courses/${encodeURIComponent(courseId)}/edit`}
-      aria-label={`Edit CS ${course.number}: ${course.title}`}
-      className="relative z-20 mt-4 self-start rounded px-2 py-1 text-sm font-semibold text-[var(--ink)] underline decoration-[var(--line)] underline-offset-4 hover:decoration-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-    >
-      Edit course <span aria-hidden="true">↗</span>
-    </Link>}
+    {(canTakeNotes || canEdit) && (
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {canTakeNotes && <Link
+          to={`/courses/${encodeURIComponent(courseId)}/note`}
+          aria-label={`My note for CS ${course.number}: ${course.title}`}
+          className={actionClassName}
+        >
+          My note
+        </Link>}
+        {canEdit && <Link
+          to={`/courses/${encodeURIComponent(courseId)}/edit`}
+          aria-label={`Edit CS ${course.number}: ${course.title}`}
+          className={actionClassName}
+        >
+          Edit course <span aria-hidden="true">↗</span>
+        </Link>}
+      </div>
+    )}
   </article>
 );

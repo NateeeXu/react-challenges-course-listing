@@ -37,6 +37,21 @@ service cloud.firestore {
       allow get: if request.auth != null && request.auth.uid == userId;
       allow list, create, update, delete: if false;
 
+      match /courseNotes/{courseId} {
+        function ownsNote() {
+          return request.auth != null && request.auth.uid == userId;
+        }
+        function validNote() {
+          let note = request.resource.data;
+          return note.keys().hasOnly(['text']) && note.get('text', null) is string
+            && note.text.size() <= 1000 && note.text.trim().size() > 0
+            && courseId in get(/databases/$(database)/documents/schedules/CS-2018-2019).data.courses;
+        }
+        allow get, delete: if ownsNote();
+        allow create, update: if ownsNote() && validNote();
+        allow list: if false;
+      }
+
       match /plans/{scheduleId} {
         function ownsPlan() {
           return request.auth != null && request.auth.uid == userId && scheduleId == 'CS-2018-2019';

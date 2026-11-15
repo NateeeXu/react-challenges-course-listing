@@ -4,8 +4,12 @@ import { MemoryRouter } from 'react-router';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { TermPage } from './TermPage';
 import type { Course } from '../types/course';
+import { loadCourseNote, saveCourseNote } from '../services/course-notes';
 
 vi.mock('../services/schedule', () => ({ saveCourse: vi.fn() }));
+vi.mock('../services/course-notes', () => ({
+  loadCourseNote: vi.fn(), saveCourseNote: vi.fn(), maxCourseNoteLength: 1000,
+}));
 vi.mock('../services/personal-plan', () => import('../test-utils/personal-plan'));
 vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'test-user' }, isLoading: false, error: null, isAdmin: true, isRoleLoading: false, roleError: null }) }));
 
@@ -242,6 +246,38 @@ describe('TermPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(await screen.findByText('0 selected')).toBeTruthy();
+  });
+
+  it('opens, saves, and reopens a private note without selecting the course', async () => {
+    vi.mocked(loadCourseNote).mockResolvedValueOnce('').mockResolvedValueOnce('Ask about labs.');
+    vi.mocked(saveCourseNote).mockResolvedValueOnce({ status: 'saved', text: 'Ask about labs.' });
+    render(<TermPage courses={courses} />);
+    fireEvent.click(screen.getByRole('link', { name: /My note for CS 101:/ }));
+    const note = await screen.findByRole('textbox', { name: 'Note' }) as HTMLTextAreaElement;
+    expect(note.value).toBe('');
+    fireEvent.change(note, { target: { value: 'Ask about labs.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    expect(await screen.findByText('Note saved.')).toBeTruthy();
+    expect(saveCourseNote).toHaveBeenCalledWith('test-user', 'F101', '', 'Ask about labs.');
+    fireEvent.click(screen.getByRole('link', { name: 'Back to courses' }));
+    expect(screen.getByText('0 selected')).toBeTruthy();
+    fireEvent.click(screen.getByRole('link', { name: /My note for CS 101:/ }));
+    expect((await screen.findByRole('textbox', { name: 'Note' }) as HTMLTextAreaElement).value).toBe('Ask about labs.');
+  });
+
+  it('keeps a stale draft and requires an explicit replacement', async () => {
+    vi.mocked(loadCourseNote).mockResolvedValueOnce('Original note');
+    vi.mocked(saveCourseNote).mockResolvedValueOnce({ status: 'conflict', text: 'Updated elsewhere' })
+      .mockResolvedValueOnce({ status: 'saved', text: 'My draft' });
+    render(<TermPage courses={courses} />, '/courses/F101/note');
+    const note = await screen.findByRole('textbox', { name: 'Note' }) as HTMLTextAreaElement;
+    fireEvent.change(note, { target: { value: 'My draft' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    expect(await screen.findByText('Updated elsewhere')).toBeTruthy();
+    expect(note.value).toBe('My draft');
+    fireEvent.click(screen.getByRole('button', { name: 'Replace saved note' }));
+    expect(await screen.findByText('Note saved.')).toBeTruthy();
+    expect(saveCourseNote).toHaveBeenLastCalledWith('test-user', 'F101', 'Updated elsewhere', 'My draft');
   });
 
   it('discards local edits and keeps the selected term and courses after Cancel', async () => {

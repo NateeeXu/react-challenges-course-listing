@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, Route, Routes } from 'react-router';
 import { CourseEditPage } from './CourseEditPage';
+import { CourseNotePage } from './CourseNotePage';
 import { CourseCard, type Course } from './CourseCard';
 import { TermSelector, type Term } from './TermSelector';
 import { SchedulePopup } from './SchedulePopup';
@@ -145,6 +146,7 @@ function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm
                 courseId={id}
                 course={course}
                 canEdit={isAdmin && !isRoleLoading}
+                canTakeNotes={uid !== null && !authLoading}
                 selected={selected}
                 conflict={conflict}
                 selectionDisabled={authLoading || !plan.ready}
@@ -164,6 +166,7 @@ function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm
     <Routes>
       <Route path="/" element={courseList} />
       <Route path="/courses/:courseId/edit" element={<CourseEditPage courses={courses} />} />
+      <Route path="/courses/:courseId/note" element={<CourseNotePage courses={courses} uid={uid} authLoading={authLoading} />} />
       <Route path="*" element={
         <section className="subject-list">
           <h2>Page not found</h2>
