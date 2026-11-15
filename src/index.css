@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  font-family: 'Avenir Next', 'Helvetica Neue', Helvetica, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f4f7f5;
-  color: #172f2a;
+  background: #f5eddb;
+  color: #171416;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background-image: radial-gradient(#dce5e0 0.65px, transparent 0.65px);
-  background-size: 18px 18px;
+  background-image: radial-gradient(#43362231 0.65px, transparent .8px);
+  background-size: 7px 7px;
 }

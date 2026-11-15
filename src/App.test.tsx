@@ -43,7 +43,8 @@ describe('App database integration', () => {
     renderApp();
     expect(screen.getByText('Loading courses…')).toBeTruthy();
     act(() => service.subscribe.mock.calls[0][0](schedule));
-    expect(screen.getByRole('heading', { name: schedule.title })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Course Arcade' })).toBeTruthy();
+    expect(screen.getByText(schedule.title)).toBeTruthy();
     expect(screen.getByText('total courses').textContent).toBe('2 total courses');
     expect(screen.getByRole('link', { name: 'Edit CS 101: AI' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Programming' })).toBeNull();

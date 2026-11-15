@@ -39,7 +39,7 @@ export function SchedulePopup({ courses, initialTerm, onClose }: SchedulePopupPr
     <dialog
       ref={dialogRef}
       aria-labelledby="course-plan-title"
-      className={`fixed inset-0 m-auto max-h-[85dvh] w-[92vw] overflow-y-auto rounded-xl border border-[var(--line)] bg-[#f4f7f5] p-0 text-[var(--ink)] shadow-xl backdrop:bg-[#172f2a]/50 backdrop:backdrop-blur-sm ${view === 'week' ? 'max-w-5xl' : 'max-w-2xl'}`}
+      className={`arcade-modal fixed inset-0 m-auto max-h-[85dvh] w-[92vw] overflow-y-auto rounded-xl border border-[var(--line)] bg-[#f4f7f5] p-0 text-[var(--ink)] shadow-xl backdrop:bg-[#172f2a]/50 backdrop:backdrop-blur-sm ${view === 'week' ? 'max-w-5xl' : 'max-w-2xl'}`}
       onCancel={(event) => {
         event.preventDefault();
         closePopup();

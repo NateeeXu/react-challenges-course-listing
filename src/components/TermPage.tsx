@@ -52,40 +52,14 @@ function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm
 
   // Keep list state above the route switch so Cancel does not clear the plan.
   const courseList = (
-    <div className="subject-list">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <TermSelector selectedTerm={selectedTerm} onSelect={onSelectTerm} />
-        <div className="flex items-center gap-3">
-          <p className="m-0 text-sm font-semibold text-[var(--ink)]" aria-live="polite">
-            {selectedCourseIds.length} selected
-          </p>
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            onClick={() => setIsPlanOpen(true)}
-            className="cursor-pointer rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-          >
-            Course plan
-          </button>
-        </div>
-      </div>
-      <div className="-mt-6 flex flex-wrap items-center gap-3">
-        <p role={plan.error ? 'alert' : 'status'} className={`m-0 text-xs ${plan.error ? 'text-[#9b3326]' : 'text-[var(--muted)]'}`}>
-          {authLoading ? 'Checking sign-in…' : plan.error || (plan.status === 'guest'
-            ? 'Temporary plan · sign in to load your saved plan.'
-            : plan.status === 'loading' ? 'Loading your saved plan…'
-              : plan.status === 'saving' ? 'Saving your plan…' : 'Your plan is saved automatically.')}
-        </p>
-        {!plan.ready && plan.error && <button type="button" onClick={plan.retryLoading}
-          className="cursor-pointer rounded border border-[var(--line)] px-3 py-1 text-xs font-semibold text-[var(--ink)]">Retry</button>}
-      </div>
-      <section className="subject-section" aria-labelledby="selected-term">
-        <div className="mb-6 grid max-w-2xl gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-          <div>
-            <label htmlFor="course-search" className="mb-2 block text-sm font-semibold text-[var(--ink)]">
-              Search {selectedTerm} courses
-            </label>
-            <div className="flex max-w-lg gap-2">
+    <div className="arcade-board">
+      <div className="arcade-controlboard">
+        <div className="arcade-controls">
+          <TermSelector selectedTerm={selectedTerm} onSelect={onSelectTerm} />
+          <div className="arcade-search">
+            <label htmlFor="course-search">Search {selectedTerm} courses</label>
+            <div className="arcade-search-field">
+              <span className="arcade-search-icon" aria-hidden="true" />
               <input
                 ref={searchRef}
                 id="course-search"
@@ -93,34 +67,40 @@ function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm
                 placeholder="Course number or title"
                 value={query}
                 onChange={(event) => onSearch(event.target.value)}
-                className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-4 py-2.5 text-sm placeholder:text-[var(--muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
               />
               {query && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    searchRef.current?.focus();
-                    onSearch('');
-                  }}
-                  className="cursor-pointer rounded-md border border-[var(--line)] bg-white px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-                >
-                  Clear search
+                <button type="button" aria-label="Clear search" onClick={() => {
+                  searchRef.current?.focus();
+                  onSearch('');
+                }}>
+                  <span aria-hidden="true">×</span>
                 </button>
               )}
             </div>
           </div>
-          <label className="block text-sm font-semibold text-[var(--ink)]">
-            <span className="mb-2 block">Meets on</span>
-            <select
-              value={meetingDay}
-              onChange={(event) => setMeetingDay(event.target.value)}
-              className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2.5 text-sm font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-            >
+          <label className="arcade-day">
+            <span>Meets on</span>
+            <select value={meetingDay} onChange={(event) => setMeetingDay(event.target.value)}>
               <option value="">Any day</option>
               {Object.entries(meetingDays).map(([day, name]) => <option key={day} value={day}>{name}</option>)}
             </select>
           </label>
+          <button type="button" aria-haspopup="dialog" onClick={() => setIsPlanOpen(true)} className="arcade-plan-button">
+            Course plan <span aria-hidden="true">↗</span>
+          </button>
         </div>
+        <div className="arcade-plan-status">
+          <p aria-live="polite" className="arcade-selected"><span aria-hidden="true" />{selectedCourseIds.length} selected</p>
+          <p role={plan.error ? 'alert' : 'status'} className={plan.error ? 'arcade-error' : undefined}>
+            {authLoading ? 'Checking sign-in…' : plan.error || (plan.status === 'guest'
+              ? 'Guest selections are temporary.'
+              : plan.status === 'loading' ? 'Loading your saved plan…'
+                : plan.status === 'saving' ? 'Saving your plan…' : 'Your plan is saved automatically.')}
+          </p>
+          {!plan.ready && plan.error && <button type="button" onClick={plan.retryLoading}>Retry</button>}
+        </div>
+      </div>
+      <section className="arcade-courses" aria-labelledby="selected-term">
         <div className="subject-heading">
           <h2 id="selected-term">{selectedTerm}</h2>
           <span role="status">
@@ -130,11 +110,11 @@ function AccountTermPage({ courses, uid, authLoading, selectedTerm, onSelectTerm
           </span>
         </div>
         {visibleCourses.length === 0 && (
-          <p className="m-0 rounded-md border border-[var(--line)] bg-white p-5 text-sm text-[var(--muted)]">
+          <p className="arcade-empty">
             {isFiltered ? 'No matching courses. Try a different search or meeting day.' : 'No courses are available for this term.'}
           </p>
         )}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-stretch gap-3.5">
+        <div className="arcade-keys">
           {visibleCourses.map(([id, course]) => {
             const selected = selectedCourseIds.includes(id);
             const conflict = !selected && selectedCourses.some(

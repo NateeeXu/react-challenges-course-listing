@@ -24,11 +24,11 @@ export const AuthBanner = () => {
   };
 
   return (
-    <section aria-label="Account" className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-5">
+    <section aria-label="Account" className="account-banner mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-5">
       <p className="m-0 text-sm text-[var(--muted)]" role="status">
         {isLoading ? 'Checking sign-in…' : user
           ? `Signed in as ${user.displayName || user.email || 'a Google user'} · ${isRoleLoading ? 'Checking permissions…' : isAdmin ? 'Administrator' : 'Read only'}`
-          : 'Browse and plan freely. Only administrators can edit courses.'}
+          : 'Sign in for saved plans and notes.'}
       </p>
       <button type="button" onClick={handleAuth} disabled={isLoading || isPending}
         className="cursor-pointer rounded-full border border-[var(--line)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
