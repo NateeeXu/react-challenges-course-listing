@@ -114,11 +114,39 @@ describe('TermPage', () => {
 
     const popup = screen.getByRole('dialog', { name: 'Course plan' });
     expect(within(popup).getByText('No courses selected yet.')).toBeTruthy();
+    expect(within(popup).queryByRole('button', { name: 'Download all terms (CSV)' })).toBeNull();
     fireEvent.click(within(popup).getByText('No courses selected yet.'));
     expect(screen.getByRole('dialog')).toBeTruthy();
     fireEvent.click(within(popup).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.body.style.overflow).toBe('');
+  });
+
+  it('combines weekday, term, and text filters without affecting the plan', () => {
+    render(<TermPage courses={{
+      ...courses,
+      F103: { term: 'Fall', number: '103', title: 'Fall seminar', meets: 'TuTh 9:00-10:20' },
+      F104: { term: 'Fall', number: '104', title: 'Independent study', meets: '' },
+    }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Select CS 101:/ }));
+    const day = screen.getByRole('combobox', { name: 'Meets on' });
+    fireEvent.change(day, { target: { value: 'Th' } });
+    expect(screen.getByText('1 of 4 courses')).toBeTruthy();
+    expect(screen.getByText('Fall seminar')).toBeTruthy();
+    expect(screen.queryByText('Independent study')).toBeNull();
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: '101' } });
+    expect(screen.getByText('0 of 4 courses')).toBeTruthy();
+    expect(screen.getByText(/No matching courses/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Winter' }));
+    expect(screen.getByText('0 of 1 courses')).toBeTruthy();
+    fireEvent.change(day, { target: { value: '' } });
+    expect(screen.getByText('Winter course')).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: 'Fall' }));
+    expect(screen.getByText('Independent study')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Select CS 101:/ }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('lists selected courses across terms and closes on outside click or Escape without clearing selections', () => {
@@ -185,6 +213,7 @@ describe('TermPage', () => {
 
     const popup = within(screen.getByRole('dialog'));
     fireEvent.click(popup.getByRole('button', { name: 'Weekly timetable' }));
+    expect(popup.getByRole('button', { name: 'Download all terms (CSV)' })).toBeTruthy();
     const term = popup.getByRole('combobox', { name: 'Timetable term' }) as HTMLSelectElement;
     expect(term.value).toBe('Winter');
     expect(within(popup.getByRole('list', { name: 'Tuesday' })).getByText('14:00–15:20')).toBeTruthy();

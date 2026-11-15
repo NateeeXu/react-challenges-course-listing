@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Course } from './CourseCard';
 import { terms, type Term } from './TermSelector';
 import { WeeklyTimetable } from './WeeklyTimetable';
+import { downloadCoursePlan } from '../utilities/course-plan-csv';
 
 interface SchedulePopupProps {
   courses: [string, Course][];
@@ -97,6 +98,15 @@ export function SchedulePopup({ courses, initialTerm, onClose }: SchedulePopupPr
           )}
         </div>
 
+        {courses.length > 0 && (
+          <button
+            type="button"
+            onClick={() => downloadCoursePlan(courses.map(([, course]) => course))}
+            className="mb-5 cursor-pointer rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          >
+            Download all terms (CSV)
+          </button>
+        )}
         {courses.length === 0 ? (
           <div className="rounded-md border border-[var(--line)] bg-white p-5">
             <p className="m-0 font-semibold">No courses selected yet.</p>
